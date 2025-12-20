@@ -1,0 +1,14 @@
+[package]
+build   = "native/build.rs"
+edition = "2021"
+name    = "native"
+version = "0.1.0"
+
+[lib]
+crate-type = ["dylib"]
+name       = "native"
+path       = "native/lib.rs"
+
+[dependencies]
+fjall   = "2"
+rustler = "0.36"

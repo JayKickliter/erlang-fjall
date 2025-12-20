@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  ci:
+    name: OTP${{ matrix.otp }}-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        otp: [27]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Cache | Rust
+      uses: actions/cache@v4
+      with:
+        key: ci-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ci-${{ runner.os }}-cargo
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          _build/native/
+
+    - name: Cache | Erlang
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/rebar3
+          _build/default
+          _build/test
+        key: ci-${{ runner.os }}-otp${{ matrix.otp }}-${{ hashFiles('rebar.lock') }}
+        restore-keys: |
+          ci-${{ runner.os }}-otp${{ matrix.otp }}
+
+    - name: Toolchain | Erlang/OTP
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: ${{ matrix.otp }}
+
+    - name: Toolchain | Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy,rustfmt
+
+    - name: Erlang | Compile
+      run: rebar3 compile
+
+    - name: Erlang | Eunit
+      run: rebar3 eunit
+
+    - name: Erlang | Dialyzer
+      run: rebar3 dialyzer
+
+    - name: Erlang | Fmt
+      run: rebar3 fmt --check
+
+    - name: Rust | Fmt
+      run: cargo fmt --all -- --check
+
+    - name: Rust | Clippy
+      run: cargo clippy --release -- -Dclippy::all -D unsafe_code
