@@ -48,6 +48,7 @@ jobs:
       uses: erlef/setup-beam@v1
       with:
         otp-version: ${{ matrix.otp }}
+        rebar3-version: 'latest'
 
     - name: Toolchain | Rust
       uses: dtolnay/rust-toolchain@stable
@@ -67,7 +68,70 @@ jobs:
       run: rebar3 fmt --check
 
     - name: Rust | Fmt
-      run: cargo fmt --all -- --check
+      run: cargo fmt --all -- --check --config imports_granularity=crate
 
     - name: Rust | Clippy
       run: cargo clippy --release -- -Dclippy::all -D unsafe_code
+
+  docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Cache | Rust
+      uses: actions/cache@v4
+      with:
+        key: docs-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: docs-${{ runner.os }}-cargo
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          _build/native/
+
+    - name: Cache | Erlang
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/rebar3
+          _build/default
+        key: docs-${{ runner.os }}-otp27-${{ hashFiles('rebar.lock') }}
+        restore-keys: |
+          docs-${{ runner.os }}-otp27
+
+    - name: Toolchain | Erlang/OTP
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: 27
+        rebar3-version: 'latest'
+
+    - name: Toolchain | Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build | Documentation
+      run: |
+        rebar3 ex_doc
+
+    - name: Setup | Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload | Artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: "doc"
+
+    - name: Deploy | Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

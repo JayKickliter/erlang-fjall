@@ -1,4 +1,4 @@
-.PHONY: ci clean compile format test typecheck
+.PHONY: ci clean compile doc format test typecheck
 
 REBAR=rebar3
 
@@ -24,13 +24,16 @@ compile:
 
 format:
 	$(REBAR) fmt
-	cargo fmt
+	cargo fmt -- --config imports_granularity=crate
 
 test:
 	$(REBAR) eunit
 
 typecheck:
 	$(REBAR) dialyzer
+
+doc:
+	$(REBAR) ex_doc
 
 %:
 	$(REBAR) $@
