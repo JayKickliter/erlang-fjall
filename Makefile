@@ -1,4 +1,4 @@
-.PHONY: ci clean compile format test typecheck
+.PHONY: ci clean compile doc format test typecheck
 
 REBAR=rebar3
 
@@ -31,6 +31,9 @@ test:
 
 typecheck:
 	$(REBAR) dialyzer
+
+doc:
+	$(REBAR) ex_doc
 
 %:
 	$(REBAR) $@
