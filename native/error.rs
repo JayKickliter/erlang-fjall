@@ -5,6 +5,8 @@ pub mod atom {
         ok,
         error,
         not_found,
+        transaction_already_finalized,
+        transaction_conflict,
     }
 }
 
@@ -19,6 +21,9 @@ pub enum FjallError {
     NotFound,
     Utf8(std::str::Utf8Error),
     Decode(String),
+    TransactionAlreadyFinalized,
+    #[allow(dead_code)]
+    TransactionConflict,
 }
 
 impl From<fjall::Error> for FjallError {
@@ -55,6 +60,12 @@ impl Encoder for FjallError {
                 (atom::error(), msg).encode(env)
             }
             FjallError::Decode(msg) => (atom::error(), msg.clone()).encode(env),
+            FjallError::TransactionAlreadyFinalized => {
+                (atom::error(), atom::transaction_already_finalized()).encode(env)
+            }
+            FjallError::TransactionConflict => {
+                (atom::error(), atom::transaction_conflict()).encode(env)
+            }
         }
     }
 }
