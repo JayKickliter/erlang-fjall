@@ -1,5 +1,5 @@
-use fjall::Config;
 use crate::error::FjallError;
+use fjall::Config;
 
 ////////////////////////////////////////////////////////////////////////////
 // Path Decoding                                                          //

@@ -1,6 +1,8 @@
+use crate::{
+    config::{decode_path, parse_config_options},
+    error::{FjallRes, FjallResult},
+};
 use rustler::{Resource, ResourceArc};
-use crate::config::{decode_path, parse_config_options};
-use crate::error::{FjallResult, FjallRes};
 
 ////////////////////////////////////////////////////////////////////////////
 // NIFs                                                                   //

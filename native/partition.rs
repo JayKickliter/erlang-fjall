@@ -1,5 +1,7 @@
-use crate::error::{FjallBinaryResult, FjallOkResult, FjallResult, FjallError, FjallRes};
-use crate::keyspace::KeyspaceRsc;
+use crate::{
+    error::{FjallBinaryResult, FjallError, FjallOkResult, FjallRes, FjallResult},
+    keyspace::KeyspaceRsc,
+};
 use rustler::ResourceArc;
 
 pub use crate::keyspace::PartitionRsc;
@@ -52,10 +54,7 @@ pub fn get(partition: ResourceArc<PartitionRsc>, key: rustler::Binary) -> FjallB
 }
 
 #[rustler::nif]
-pub fn remove(
-    partition: ResourceArc<PartitionRsc>,
-    key: rustler::Binary,
-) -> FjallOkResult {
+pub fn remove(partition: ResourceArc<PartitionRsc>, key: rustler::Binary) -> FjallOkResult {
     let result = (|| {
         partition.0.remove(key.as_slice()).to_erlang_result()?;
         Ok(())
