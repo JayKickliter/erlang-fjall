@@ -48,6 +48,7 @@ jobs:
       uses: erlef/setup-beam@v1
       with:
         otp-version: ${{ matrix.otp }}
+        rebar3-version: 'latest'
 
     - name: Toolchain | Rust
       uses: dtolnay/rust-toolchain@stable
