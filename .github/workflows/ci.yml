@@ -71,7 +71,7 @@ jobs:
       run: cargo fmt --all -- --check --config imports_granularity=crate
 
     - name: Rust | Clippy
-      run: cargo clippy --release -- -Dclippy::all -D unsafe_code
+      run: cargo clippy --release -- -Dclippy::all
 
   docs:
     name: Deploy Documentation
