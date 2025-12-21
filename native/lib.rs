@@ -1,15 +1,6 @@
-use rustler::Atom;
-
-mod atom {
-    rustler::atoms! {
-        ok,
-        error,
-    }
-}
-
-#[rustler::nif]
-fn hello() -> Atom {
-    atom::ok()
-}
+mod config;
+mod error;
+mod keyspace;
+mod partition;
 
 rustler::init!("fjall");
