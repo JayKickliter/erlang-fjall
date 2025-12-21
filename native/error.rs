@@ -14,28 +14,28 @@ pub mod atom {
 
 #[derive(Debug)]
 pub enum FjallError {
-    FjallError(fjall::Error),
-    ConfigError(String),
+    Fjall(fjall::Error),
+    Config(String),
     NotFound,
-    Utf8Error(std::str::Utf8Error),
-    DecodingError(String),
+    Utf8(std::str::Utf8Error),
+    Decode(String),
 }
 
 impl From<fjall::Error> for FjallError {
     fn from(err: fjall::Error) -> Self {
-        FjallError::FjallError(err)
+        FjallError::Fjall(err)
     }
 }
 
 impl From<std::str::Utf8Error> for FjallError {
     fn from(err: std::str::Utf8Error) -> Self {
-        FjallError::Utf8Error(err)
+        FjallError::Utf8(err)
     }
 }
 
 impl From<rustler::Error> for FjallError {
     fn from(err: rustler::Error) -> Self {
-        FjallError::DecodingError(format!("{:?}", err))
+        FjallError::Decode(format!("{:?}", err))
     }
 }
 
@@ -44,17 +44,17 @@ impl std::panic::RefUnwindSafe for FjallError {}
 impl Encoder for FjallError {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         match self {
-            FjallError::FjallError(e) => {
+            FjallError::Fjall(e) => {
                 let msg = format!("{:?}", e);
                 (atom::error(), msg).encode(env)
             }
-            FjallError::ConfigError(msg) => (atom::error(), msg.clone()).encode(env),
+            FjallError::Config(msg) => (atom::error(), msg.clone()).encode(env),
             FjallError::NotFound => (atom::error(), atom::not_found()).encode(env),
-            FjallError::Utf8Error(e) => {
+            FjallError::Utf8(e) => {
                 let msg = format!("UTF-8 error: {}", e);
                 (atom::error(), msg).encode(env)
             }
-            FjallError::DecodingError(msg) => (atom::error(), msg.clone()).encode(env),
+            FjallError::Decode(msg) => (atom::error(), msg.clone()).encode(env),
         }
     }
 }

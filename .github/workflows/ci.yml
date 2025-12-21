@@ -68,7 +68,7 @@ jobs:
       run: rebar3 fmt --check
 
     - name: Rust | Fmt
-      run: cargo fmt --all -- --check
+      run: cargo fmt --all -- --check --config imports_granularity=crate
 
     - name: Rust | Clippy
       run: cargo clippy --release -- -Dclippy::all -D unsafe_code

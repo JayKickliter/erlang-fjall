@@ -24,7 +24,7 @@ compile:
 
 format:
 	$(REBAR) fmt
-	cargo fmt
+	cargo fmt -- --config imports_granularity=crate
 
 test:
 	$(REBAR) eunit

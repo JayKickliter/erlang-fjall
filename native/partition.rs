@@ -2,9 +2,7 @@ use crate::{
     error::{FjallBinaryResult, FjallError, FjallOkResult, FjallRes, FjallResult},
     keyspace::KeyspaceRsc,
 };
-use rustler::ResourceArc;
-
-pub use crate::keyspace::PartitionRsc;
+use rustler::{Resource, ResourceArc};
 
 ////////////////////////////////////////////////////////////////////////////
 // Partition NIFs                                                         //

@@ -61,7 +61,7 @@ pub fn parse_config_options(
                 config = config.temporary(val);
             }
             _ => {
-                return Err(FjallError::ConfigError(format!(
+                return Err(FjallError::Config(format!(
                     "Unknown config option: {:?}",
                     key
                 )))
