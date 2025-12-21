@@ -36,13 +36,15 @@
     open_partition/2,
     insert/3,
     get/2,
-    remove/2
+    remove/2,
+    persist/2
 ]).
 
 -export_type([
     keyspace/0,
     partition/0,
-    config_option/0
+    config_option/0,
+    persist_mode/0
 ]).
 
 %% Opaque handle to a Fjall keyspace instance.
@@ -90,6 +92,22 @@
     | {max_write_buffer_size, pos_integer()}
     | {fsync_ms, pos_integer() | undefined}
     | {temporary, boolean()}.
+
+%% Persist mode for keyspace persistence.
+%%
+%% Determines the durability guarantee when persisting a keyspace:
+%% <ul>
+%%   <li>`buffer' - Flush to OS buffers only. Data survives application crash
+%%       but not power loss or OS crash.</li>
+%%   <li>`sync_data' - Flush with fdatasync. Ensures data is written to disk,
+%%       suitable for most file systems.</li>
+%%   <li>`sync_all' - Flush with fsync. Strongest guarantee, ensuring both data
+%%       and metadata are written to disk.</li>
+%% </ul>
+-type persist_mode() ::
+    buffer
+    | sync_data
+    | sync_all.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Public API                                                             %%
@@ -258,6 +276,43 @@ get(_Partition, _Key) ->
 -spec remove(Partition :: partition(), Key :: binary()) ->
     ok | {error, term()}.
 remove(_Partition, _Key) ->
+    erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+%% @doc Persists the keyspace to disk with the specified durability mode.
+%%
+%% This function flushes all in-memory data and journals to storage according
+%% to the specified persist mode. It is useful when you want to ensure all
+%% writes are durable, especially when using `{manual_journal_persist, true}'
+%% configuration.
+%%
+%% The persist mode controls the durability guarantee:
+%% <ul>
+%%   <li>`buffer' - Fastest, least durable. Suitable for data that can be
+%%       reconstructed after an application crash.</li>
+%%   <li>`sync_data' - Good balance of performance and durability. Recommended
+%%       for most applications.</li>
+%%   <li>`sync_all' - Slowest, most durable. Ensures both data and metadata
+%%       are written to disk. Recommended for critical data.</li>
+%% </ul>
+%%
+%% Returns `ok' on success or `{error, Reason}' on failure.
+%%
+%% == Errors ==
+%%
+%% <ul>
+%%   <li>`{error, disk_error}' - I/O error when writing to disk</li>
+%% </ul>
+%%
+%% == Example ==
+%%
+%% ```
+%% {ok, Keyspace} = fjall:open("./db"),
+%% ok = fjall:insert(Partition, <<"key">>, <<"value">>),
+%% ok = fjall:persist(Keyspace, sync_all)
+%% '''
+-spec persist(Keyspace :: keyspace(), Mode :: persist_mode()) ->
+    ok | {error, term()}.
+persist(_Keyspace, _Mode) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
