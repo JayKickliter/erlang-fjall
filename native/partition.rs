@@ -61,3 +61,14 @@ pub fn remove(partition: ResourceArc<PartitionRsc>, key: rustler::Binary) -> Fja
     })();
     FjallOkResult(result)
 }
+
+////////////////////////////////////////////////////////////////////////////
+// Resources                                                              //
+////////////////////////////////////////////////////////////////////////////
+
+pub struct PartitionRsc(pub fjall::PartitionHandle);
+
+impl std::panic::RefUnwindSafe for PartitionRsc {}
+
+#[rustler::resource_impl]
+impl Resource for PartitionRsc {}

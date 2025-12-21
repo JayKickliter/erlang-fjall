@@ -32,10 +32,3 @@ impl std::panic::RefUnwindSafe for KeyspaceRsc {}
 
 #[rustler::resource_impl]
 impl Resource for KeyspaceRsc {}
-
-pub struct PartitionRsc(pub fjall::PartitionHandle);
-
-impl std::panic::RefUnwindSafe for PartitionRsc {}
-
-#[rustler::resource_impl]
-impl Resource for PartitionRsc {}
