@@ -37,11 +37,6 @@ impl std::panic::RefUnwindSafe for TxnPartitionRsc {}
 impl Resource for TxnPartitionRsc {}
 
 /// Write transaction resource
-///
-/// Holds a WriteTransaction with lifetime 'static (via unsafe transmute).
-/// Safety is maintained by storing ResourceArc<TxnKeyspaceRsc> which ensures
-/// the keyspace outlives the transaction. When this resource is dropped,
-/// the transaction is dropped first, then the keyspace reference.
 pub struct WriteTxnRsc {
     // Mutex for interior mutability and thread safety, Option to track finalization state
     txn: Mutex<Option<fjall::WriteTransaction<'static>>>,
@@ -51,15 +46,15 @@ pub struct WriteTxnRsc {
 
 impl WriteTxnRsc {
     /// Create a new write transaction
-    ///
-    /// SAFETY: We transmute the WriteTransaction's lifetime to 'static, but this is
-    /// safe because we store an Arc to the keyspace. The Arc keeps the keyspace alive,
-    /// ensuring the 'static lifetime is valid. The keyspace will outlive the transaction
-    /// because Erlang's GC ensures this resource is dropped before the keyspace.
     fn new(keyspace: ResourceArc<TxnKeyspaceRsc>) -> Self {
         let txn = keyspace.0.write_tx();
 
-        // SAFETY: Transmute to 'static lifetime
+        // SAFETY: We transmute the WriteTransaction's lifetime to
+        // 'static, but this is safe because we store an Arc to the
+        // keyspace. The Arc keeps the keyspace alive, ensuring the
+        // 'static lifetime is valid. The keyspace will outlive the
+        // transaction because Erlang's GC ensures this resource is
+        // dropped before the keyspace.
         let txn_static = unsafe {
             std::mem::transmute::<fjall::WriteTransaction<'_>, fjall::WriteTransaction<'static>>(
                 txn,
@@ -103,7 +98,6 @@ impl std::panic::RefUnwindSafe for WriteTxnRsc {}
 
 // SAFETY: WriteTxnRsc is safe to Send because:
 // - The WriteTransaction inside only holds internal Mutex guards that are not actually shared
-// - Erlang's scheduler ensures only one thread accesses this resource at a time
 // - We never hand this off to other threads manually
 unsafe impl Send for WriteTxnRsc {}
 
@@ -128,9 +122,9 @@ impl Drop for WriteTxnRsc {
 
 /// Read transaction resource
 ///
-/// Provides snapshot isolation - the transaction sees a consistent point-in-time view
-/// of the data. ReadTransaction has no lifetime constraints, so this is simpler
-/// than WriteTxnRsc.
+/// Provides snapshot isolation: the transaction sees a consistent
+/// point-in-time view of the data. ReadTransaction has no lifetime
+/// constraints, so this is simpler than WriteTxnRsc.
 pub struct ReadTxnRsc {
     pub txn: fjall::ReadTransaction,
     // Keep keyspace alive during transaction lifetime
