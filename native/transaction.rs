@@ -149,7 +149,7 @@ pub fn open_txn_keyspace(
 
 #[rustler::nif]
 pub fn begin_write_txn(db: ResourceArc<TxDatabaseRsc>) -> FjallResult<ResourceArc<WriteTxnRsc>> {
-    let result = WriteTxnRsc::new(db).map(|txn| ResourceArc::new(txn));
+    let result = WriteTxnRsc::new(db).map(ResourceArc::new);
     FjallResult(result)
 }
 
