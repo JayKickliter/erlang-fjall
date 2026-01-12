@@ -16,33 +16,33 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
-        otp: [28]
+        otp: [27]
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Cache | Rust
-      uses: actions/cache@v4
-      with:
-        key: ci-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: ci-${{ runner.os }}-cargo
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          _build/native/
+    # - name: Cache | Rust
+    #   uses: actions/cache@v4
+    #   with:
+    #     key: ci-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    #     restore-keys: ci-${{ runner.os }}-cargo
+    #     path: |
+    #       ~/.cargo/bin/
+    #       ~/.cargo/registry/index/
+    #       ~/.cargo/registry/cache/
+    #       ~/.cargo/git/db/
+    #       _build/native/
 
-    - name: Cache | Erlang
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/rebar3
-          _build/default
-          _build/test
-        key: ci-${{ runner.os }}-otp${{ matrix.otp }}-${{ hashFiles('rebar.lock') }}
-        restore-keys: |
-          ci-${{ runner.os }}-otp${{ matrix.otp }}
+    # - name: Cache | Erlang
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: |
+    #       ~/.cache/rebar3
+    #       _build/default
+    #       _build/test
+    #     key: ci-${{ runner.os }}-otp${{ matrix.otp }}-${{ hashFiles('rebar.lock') }}
+    #     restore-keys: |
+    #       ci-${{ runner.os }}-otp${{ matrix.otp }}
 
     - name: Toolchain | Erlang/OTP
       uses: erlef/setup-beam@v1
@@ -89,27 +89,27 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Cache | Rust
-      uses: actions/cache@v4
-      with:
-        key: docs-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: docs-${{ runner.os }}-cargo
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          _build/native/
+    # - name: Cache | Rust
+    #   uses: actions/cache@v4
+    #   with:
+    #     key: docs-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    #     restore-keys: docs-${{ runner.os }}-cargo
+    #     path: |
+    #       ~/.cargo/bin/
+    #       ~/.cargo/registry/index/
+    #       ~/.cargo/registry/cache/
+    #       ~/.cargo/git/db/
+    #       _build/native/
 
-    - name: Cache | Erlang
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/rebar3
-          _build/default
-        key: docs-${{ runner.os }}-otp27-${{ hashFiles('rebar.lock') }}
-        restore-keys: |
-          docs-${{ runner.os }}-otp27
+    # - name: Cache | Erlang
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: |
+    #       ~/.cache/rebar3
+    #       _build/default
+    #     key: docs-${{ runner.os }}-otp27-${{ hashFiles('rebar.lock') }}
+    #     restore-keys: |
+    #       docs-${{ runner.os }}-otp27
 
     - name: Toolchain | Erlang/OTP
       uses: erlef/setup-beam@v1
