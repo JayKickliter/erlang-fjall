@@ -33,14 +33,14 @@
 -export([
     open/1,
     open/2,
-    open_partition/2,
+    open_keyspace/2,
     insert/3,
     get/2,
     remove/2,
     persist/2,
     open_txn/1,
     open_txn/2,
-    open_txn_partition/2,
+    open_txn_keyspace/2,
     begin_write_txn/1,
     begin_read_txn/1,
     txn_insert/4,
@@ -52,60 +52,51 @@
 ]).
 
 -export_type([
+    database/0,
     keyspace/0,
-    partition/0,
     config_option/0,
     persist_mode/0,
+    txn_database/0,
     txn_keyspace/0,
-    txn_partition/0,
     write_txn/0,
     read_txn/0
 ]).
 
-%% Opaque handle to a Fjall keyspace instance.
+%% Opaque handle to a Fjall database instance.
 %%
-%% Keyspaces are database instances that can contain multiple partitions.
-%% Use `open/1' or `open/2' to create or open a keyspace.
--opaque keyspace() :: reference().
+%% Databases are root instances that can contain multiple keyspaces.
+%% Use `open/1' or `open/2' to create or open a database.
+-opaque database() :: reference().
 
-%% Opaque handle to a partition within a keyspace.
+%% Opaque handle to a keyspace within a database.
 %%
-%% Partitions are logical separations of data within a keyspace.
-%% Use `open_partition/2' to open a partition for key-value operations.
--opaque partition() :: reference().
+%% Keyspaces are logical separations of data within a database.
+%% Use `open_keyspace/2' to open a keyspace for key-value operations.
+-opaque keyspace() :: reference().
 
 %% Configuration option for keyspace creation.
 %%
 %% Supported options:
 %% <ul>
 %%   <li>`{cache_size, pos_integer()}' - Total block cache size in bytes. Higher values
-%%       improve read performance but consume more memory. Default: 256MB</li>
-%%   <li>`{max_write_buffer_size, pos_integer()}' - Maximum in-memory write buffer (memtable)
-%%       size in bytes. When exceeded, data is flushed to disk. Default: 64MB</li>
+%%       improve read performance but consume more memory. Default: 32MB</li>
 %%   <li>`{max_journaling_size, pos_integer()}' - Maximum write-ahead log (journal) size
 %%       in bytes. Older journals are cleaned up as needed. Default: 512MB</li>
-%%   <li>`{flush_workers, pos_integer()}' - Number of worker threads for flushing memtables
-%%       to disk. Default: 2</li>
-%%   <li>`{compaction_workers, pos_integer()}' - Number of worker threads for background
-%%       compaction of SSTables. Default: 4</li>
-%%   <li>`{max_open_files, pos_integer()}' - Maximum number of open file descriptors.
-%%       Default: 1024</li>
+%%   <li>`{worker_threads, pos_integer()}' - Number of worker threads for background
+%%       maintenance (flushing and compaction). Default: min(CPU cores, 4)</li>
+%%   <li>`{max_cached_files, pos_integer()}' - Maximum number of cached file descriptors.
+%%       Default: 150 (macOS), 900 (Linux), 400 (Windows)</li>
 %%   <li>`{manual_journal_persist, boolean()}' - If `true', journal persistence is manual
 %%       and must be triggered explicitly. Default: `false'</li>
-%%   <li>`{fsync_ms, pos_integer() | undefined}' - How often to fsync the journal.
-%%       `undefined' disables periodic fsync. Default: undefined</li>
 %%   <li>`{temporary, boolean()}' - If `true', the keyspace is temporary and will be
 %%       deleted when closed. Default: `false'</li>
 %% </ul>
 -type config_option() ::
     {manual_journal_persist, boolean()}
-    | {flush_workers, pos_integer()}
-    | {compaction_workers, pos_integer()}
-    | {max_open_files, pos_integer()}
+    | {worker_threads, pos_integer()}
+    | {max_cached_files, pos_integer()}
     | {cache_size, pos_integer()}
     | {max_journaling_size, pos_integer()}
-    | {max_write_buffer_size, pos_integer()}
-    | {fsync_ms, pos_integer() | undefined}
     | {temporary, boolean()}.
 
 %% Persist mode for keyspace persistence.
@@ -124,18 +115,18 @@
     | sync_data
     | sync_all.
 
-%% Opaque handle to a transactional keyspace instance.
+%% Opaque handle to a transactional database instance.
 %%
-%% Transactional keyspaces support ACID transactions for atomic
-%% multi-partition updates and snapshot-isolated reads.
-%% Use `open_txn/1' or `open_txn/2' to create a transactional keyspace.
--opaque txn_keyspace() :: reference().
+%% Transactional databases support ACID transactions for atomic
+%% multi-keyspace updates and snapshot-isolated reads.
+%% Use `open_txn/1' or `open_txn/2' to create a transactional database.
+-opaque txn_database() :: reference().
 
-%% Opaque handle to a partition in a transactional keyspace.
+%% Opaque handle to a keyspace in a transactional database.
 %%
 %% Used for operations within transactions. Accessed via
-%% `open_txn_partition/2'.
--opaque txn_partition() :: reference().
+%% `open_txn_keyspace/2'.
+-opaque txn_keyspace() :: reference().
 
 %% Opaque handle to a write transaction.
 %%
@@ -154,13 +145,13 @@
 %% Public API                                                             %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% @doc Opens a keyspace at the given path with default configuration options.
+%% @doc Opens a database at the given path with default configuration options.
 %%
 %% The path can be a string, binary, or atom representing a file system path.
-%% If the keyspace already exists at the given path, it will be opened.
-%% Otherwise, a new keyspace will be created.
+%% If the database already exists at the given path, it will be opened.
+%% Otherwise, a new database will be created.
 %%
-%% Returns `{ok, Keyspace}' on success or `{error, Reason}' on failure.
+%% Returns `{ok, Database}' on success or `{error, Reason}' on failure.
 %%
 %% == Errors ==
 %%
@@ -174,76 +165,75 @@
 %% == Example ==
 %%
 %% ```
-%% {ok, Keyspace} = fjall:open("/var/lib/mydb")
+%% {ok, Database} = fjall:open("/var/lib/mydb")
 %% '''
 -spec open(Path :: file:name_all()) ->
-    {ok, keyspace()} | {error, term()}.
+    {ok, database()} | {error, term()}.
 open(Path) ->
     open(Path, []).
 
-%% @doc Opens a keyspace at the given path with custom configuration options.
+%% @doc Opens a database at the given path with custom configuration options.
 %%
 %% Configuration options allow fine-tuning of Fjall's behavior for specific
 %% workloads. Options are provided as a list of tuples. Unknown options will
 %% result in an error.
 %%
-%% Returns `{ok, Keyspace}' on success or `{error, Reason}' on failure.
+%% Returns `{ok, Database}' on success or `{error, Reason}' on failure.
 %%
 %% == Example ==
 %%
 %% ```
 %% Options = [
 %%     {cache_size, 512 * 1024 * 1024},  % 512MB cache
-%%     {max_write_buffer_size, 128 * 1024 * 1024},  % 128MB memtable
-%%     {flush_workers, 4}  % 4 flush threads
+%%     {worker_threads, 4}  % 4 worker threads
 %% ],
-%% {ok, Keyspace} = fjall:open("/var/lib/mydb", Options)
+%% {ok, Database} = fjall:open("/var/lib/mydb", Options)
 %% '''
 %%
 %% == See Also ==
 %%
 %% `config_option/0' for available configuration options.
 -spec open(Path :: file:name_all(), Options :: [config_option()]) ->
-    {ok, keyspace()} | {error, term()}.
+    {ok, database()} | {error, term()}.
 open(Path, Options) ->
     PathBinary = path_to_binary(Path),
     open_nif(PathBinary, Options).
 
 -spec open_nif(Path :: binary(), Options :: [config_option()]) ->
-    {ok, keyspace()} | {error, term()}.
+    {ok, database()} | {error, term()}.
 open_nif(_Path, _Options) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Opens or creates a partition within a keyspace.
+%% @doc Opens or creates a keyspace within a database.
 %%
-%% Partitions provide logical separation of data within a single keyspace.
-%% If a partition with the given name already exists, it is opened.
-%% Otherwise, a new partition is created.
+%% Keyspaces provide logical separation of data within a single database.
+%% If a keyspace with the given name already exists, it is opened.
+%% Otherwise, a new keyspace is created.
 %%
-%% The partition name must be a binary. Partition names are persistent and
-%% will be recovered when the keyspace is reopened.
+%% The keyspace name must be a binary. Keyspace names are persistent and
+%% will be recovered when the database is reopened.
 %%
-%% Returns `{ok, Partition}' on success or `{error, Reason}' on failure.
+%% Returns `{ok, Keyspace}' on success or `{error, Reason}' on failure.
 %%
 %% == Errors ==
 %%
 %% <ul>
-%%   <li>`{error, disk_error}' - I/O error when accessing partition data</li>
-%%   <li>`{error, corrupted}' - Partition data is corrupted</li>
+%%   <li>`{error, disk_error}' - I/O error when accessing keyspace data</li>
+%%   <li>`{error, corrupted}' - Keyspace data is corrupted</li>
 %% </ul>
 %%
 %% == Example ==
 %%
 %% ```
-%% {ok, Keyspace} = fjall:open("./db"),
-%% {ok, Partition} = fjall:open_partition(Keyspace, <<"users">>)
+%% {ok, Database} = fjall:open("./db"),
+%% {ok, Keyspace} = fjall:open_keyspace(Database, <<"users">>)
 %% '''
--spec open_partition(Keyspace :: keyspace(), Name :: binary()) ->
-    {ok, partition()} | {error, term()}.
-open_partition(_Keyspace, _Name) ->
+-spec open_keyspace(Database :: database(), Name :: binary()) ->
+    {ok, keyspace()} | {error, term()}.
+open_keyspace(_Database, _Name) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Inserts or updates a key-value pair in the partition.
+%% @doc Inserts or updates a key-value pair in the keyspace.
 %%
 %% If the key already exists, its value is overwritten.
 %% Both keys and values must be binaries.
@@ -260,14 +250,14 @@ open_partition(_Keyspace, _Name) ->
 %% == Example ==
 %%
 %% ```
-%% ok = fjall:insert(Partition, <<"alice">>, <<"alice@example.com">>)
+%% ok = fjall:insert(Keyspace, <<"alice">>, <<"alice@example.com">>)
 %% '''
--spec insert(Partition :: partition(), Key :: binary(), Value :: binary()) ->
+-spec insert(Keyspace :: keyspace(), Key :: binary(), Value :: binary()) ->
     ok | {error, term()}.
-insert(_Partition, _Key, _Value) ->
+insert(_Keyspace, _Key, _Value) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Retrieves the value associated with a key from the partition.
+%% @doc Retrieves the value associated with a key from the keyspace.
 %%
 %% Returns `{ok, Value}' if the key exists, or `{error, not_found}' if the
 %% key does not exist. Returns `{error, Reason}' on other errors.
@@ -275,14 +265,14 @@ insert(_Partition, _Key, _Value) ->
 %% == Errors ==
 %%
 %% <ul>
-%%   <li>`{error, not_found}' - Key does not exist in the partition</li>
+%%   <li>`{error, not_found}' - Key does not exist in the keyspace</li>
 %%   <li>`{error, disk_error}' - I/O error when reading from disk</li>
 %% </ul>
 %%
 %% == Example ==
 %%
 %% ```
-%% case fjall:get(Partition, <<"alice">>) of
+%% case fjall:get(Keyspace, <<"alice">>) of
 %%     {ok, Email} ->
 %%         io:format("Alice's email: ~s~n", [Email]);
 %%     {error, not_found} ->
@@ -291,12 +281,12 @@ insert(_Partition, _Key, _Value) ->
 %%         io:format("Error: ~p~n", [Reason])
 %% end
 %% '''
--spec get(Partition :: partition(), Key :: binary()) ->
+-spec get(Keyspace :: keyspace(), Key :: binary()) ->
     {ok, binary()} | {error, term()}.
-get(_Partition, _Key) ->
+get(_Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Removes a key-value pair from the partition.
+%% @doc Removes a key-value pair from the keyspace.
 %%
 %% If the key does not exist, this is a no-op and still returns `ok'.
 %% Both keys and values must be binaries.
@@ -312,14 +302,14 @@ get(_Partition, _Key) ->
 %% == Example ==
 %%
 %% ```
-%% ok = fjall:remove(Partition, <<"alice">>)
+%% ok = fjall:remove(Keyspace, <<"alice">>)
 %% '''
--spec remove(Partition :: partition(), Key :: binary()) ->
+-spec remove(Keyspace :: keyspace(), Key :: binary()) ->
     ok | {error, term()}.
-remove(_Partition, _Key) ->
+remove(_Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Persists the keyspace to disk with the specified durability mode.
+%% @doc Persists the database to disk with the specified durability mode.
 %%
 %% This function flushes all in-memory data and journals to storage according
 %% to the specified persist mode. It is useful when you want to ensure all
@@ -347,58 +337,58 @@ remove(_Partition, _Key) ->
 %% == Example ==
 %%
 %% ```
-%% {ok, Keyspace} = fjall:open("./db"),
-%% ok = fjall:insert(Partition, <<"key">>, <<"value">>),
-%% ok = fjall:persist(Keyspace, sync_all)
+%% {ok, Database} = fjall:open("./db"),
+%% ok = fjall:insert(Keyspace, <<"key">>, <<"value">>),
+%% ok = fjall:persist(Database, sync_all)
 %% '''
--spec persist(Keyspace :: keyspace(), Mode :: persist_mode()) ->
+-spec persist(Database :: database(), Mode :: persist_mode()) ->
     ok | {error, term()}.
-persist(_Keyspace, _Mode) ->
+persist(_Database, _Mode) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Transactional API                                                      %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% @doc Opens a transactional keyspace at the given path with default configuration.
+%% @doc Opens a transactional database at the given path with default configuration.
 %%
-%% Returns a transactional keyspace that supports ACID transactions for
-%% atomic multi-partition writes and snapshot-isolated reads.
+%% Returns a transactional database that supports ACID transactions for
+%% atomic multi-keyspace writes and snapshot-isolated reads.
 %%
 %% See `open/1' for path handling and error information.
 -spec open_txn(Path :: file:name_all()) ->
-    {ok, txn_keyspace()} | {error, term()}.
+    {ok, txn_database()} | {error, term()}.
 open_txn(Path) ->
     open_txn(Path, []).
 
-%% @doc Opens a transactional keyspace with configuration options.
+%% @doc Opens a transactional database with configuration options.
 %%
 %% Accepts the same configuration options as `open/2'. The transactional
-%% keyspace can be used for both transactional and non-transactional
-%% partition operations.
+%% database can be used for both transactional and non-transactional
+%% keyspace operations.
 -spec open_txn(Path :: file:name_all(), Options :: [config_option()]) ->
-    {ok, txn_keyspace()} | {error, term()}.
+    {ok, txn_database()} | {error, term()}.
 open_txn(Path, Options) ->
     PathBinary = path_to_binary(Path),
     open_txn_nif(PathBinary, Options).
 
 -spec open_txn_nif(Path :: binary(), Options :: [config_option()]) ->
-    {ok, txn_keyspace()} | {error, term()}.
+    {ok, txn_database()} | {error, term()}.
 open_txn_nif(_Path, _Options) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Opens or creates a partition in a transactional keyspace.
+%% @doc Opens or creates a keyspace in a transactional database.
 %%
-%% Returns a partition handle for use in transactions. Like `open_partition/2'
-%% but for use with transactional keyspaces.
--spec open_txn_partition(Keyspace :: txn_keyspace(), Name :: binary()) ->
-    {ok, txn_partition()} | {error, term()}.
-open_txn_partition(_Keyspace, _Name) ->
+%% Returns a keyspace handle for use in transactions. Like `open_keyspace/2'
+%% but for use with transactional databases.
+-spec open_txn_keyspace(Database :: txn_database(), Name :: binary()) ->
+    {ok, txn_keyspace()} | {error, term()}.
+open_txn_keyspace(_Database, _Name) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Begins a write transaction on the keyspace.
+%% @doc Begins a write transaction on the database.
 %%
-%% Returns a transaction handle that can be used for atomic multi-partition
+%% Returns a transaction handle that can be used for atomic multi-keyspace
 %% writes. The transaction must be explicitly committed with `commit_txn/1'
 %% or rolled back with `rollback_txn/1'. If neither is called, automatic
 %% rollback occurs when the transaction is garbage collected.
@@ -409,23 +399,23 @@ open_txn_partition(_Keyspace, _Name) ->
 %% - **Read-your-own-writes (RYOW)**: Reads within the transaction see
 %%   uncommitted writes by the same transaction.
 %% - **Atomicity**: All writes commit or none do.
-%% - **Single-writer serialization**: Transactions are serialized per keyspace.
-%% - **Cross-partition atomicity**: Can update multiple partitions atomically.
+%% - **Single-writer serialization**: Transactions are serialized per database.
+%% - **Cross-keyspace atomicity**: Can update multiple keyspaces atomically.
 %%
 %% == Example ==
 %%
 %% ```
-%% {ok, Txn} = fjall:begin_write_txn(Keyspace),
-%% ok = fjall:txn_insert(Txn, Partition1, <<"key1">>, <<"value1">>),
-%% ok = fjall:txn_insert(Txn, Partition2, <<"key2">>, <<"value2">>),
+%% {ok, Txn} = fjall:begin_write_txn(Database),
+%% ok = fjall:txn_insert(Txn, Keyspace1, <<"key1">>, <<"value1">>),
+%% ok = fjall:txn_insert(Txn, Keyspace2, <<"key2">>, <<"value2">>),
 %% ok = fjall:commit_txn(Txn)  % Both inserts are now atomic
 %% '''
--spec begin_write_txn(Keyspace :: txn_keyspace()) ->
+-spec begin_write_txn(Database :: txn_database()) ->
     {ok, write_txn()} | {error, term()}.
-begin_write_txn(_Keyspace) ->
+begin_write_txn(_Database) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Begins a read transaction (snapshot) on the keyspace.
+%% @doc Begins a read transaction (snapshot) on the database.
 %%
 %% Returns a read-only transaction handle that sees a consistent point-in-time
 %% view of the data. Multiple read transactions can run concurrently.
@@ -442,15 +432,15 @@ begin_write_txn(_Keyspace) ->
 %% == Example ==
 %%
 %% ```
-%% {ok, ReadTxn} = fjall:begin_read_txn(Keyspace),
-%% {ok, Value1} = fjall:read_txn_get(ReadTxn, Partition, <<"key1">>),
+%% {ok, ReadTxn} = fjall:begin_read_txn(Database),
+%% {ok, Value1} = fjall:read_txn_get(ReadTxn, Keyspace, <<"key1">>),
 %% % Even if another write happens now:
-%% % {ok, Value2} = fjall:read_txn_get(ReadTxn, Partition, <<"key2">>)
+%% % {ok, Value2} = fjall:read_txn_get(ReadTxn, Keyspace, <<"key2">>)
 %% % ReadTxn still sees its original snapshot
 %% '''
--spec begin_read_txn(Keyspace :: txn_keyspace()) ->
+-spec begin_read_txn(Database :: txn_database()) ->
     {ok, read_txn()} | {error, term()}.
-begin_read_txn(_Keyspace) ->
+begin_read_txn(_Database) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 %% @doc Inserts or updates a key-value pair within a write transaction.
@@ -463,12 +453,12 @@ begin_read_txn(_Keyspace) ->
 %% to commit or rollback.
 -spec txn_insert(
     Txn :: write_txn(),
-    Partition :: txn_partition(),
+    Keyspace :: txn_keyspace(),
     Key :: binary(),
     Value :: binary()
 ) ->
     ok | {error, term()}.
-txn_insert(_Txn, _Partition, _Key, _Value) ->
+txn_insert(_Txn, _Keyspace, _Key, _Value) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 %% @doc Retrieves a value from a write transaction.
@@ -480,19 +470,19 @@ txn_insert(_Txn, _Partition, _Key, _Value) ->
 %%
 %% If the key was inserted or updated earlier in the same transaction,
 %% this returns that value. Otherwise, it returns the value from the
-%% keyspace at transaction start time.
--spec txn_get(Txn :: write_txn(), Partition :: txn_partition(), Key :: binary()) ->
+%% database at transaction start time.
+-spec txn_get(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
     {ok, binary()} | {error, term()}.
-txn_get(_Txn, _Partition, _Key) ->
+txn_get(_Txn, _Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 %% @doc Removes a key from a write transaction.
 %%
 %% If the key doesn't exist, this is a no-op and returns `ok'.
 %% The removal is visible to subsequent reads in the same transaction.
--spec txn_remove(Txn :: write_txn(), Partition :: txn_partition(), Key :: binary()) ->
+-spec txn_remove(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
     ok | {error, term()}.
-txn_remove(_Txn, _Partition, _Key) ->
+txn_remove(_Txn, _Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 %% @doc Retrieves a value from a read transaction (snapshot).
@@ -500,9 +490,9 @@ txn_remove(_Txn, _Partition, _Key) ->
 %% Returns the value if it exists in the snapshot, or `{error, not_found}'
 %% if it doesn't. All reads in the same read transaction see the same
 %% snapshot, regardless of concurrent writes.
--spec read_txn_get(Txn :: read_txn(), Partition :: txn_partition(), Key :: binary()) ->
+-spec read_txn_get(Txn :: read_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
     {ok, binary()} | {error, term()}.
-read_txn_get(_Txn, _Partition, _Key) ->
+read_txn_get(_Txn, _Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 %% @doc Commits a write transaction, making all changes durable.

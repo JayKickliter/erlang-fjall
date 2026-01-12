@@ -1,58 +1,11 @@
 use crate::{
-    config::{decode_path, parse_config_options},
-    error::{FjallError, FjallOkResult, FjallRes, FjallResult},
+    error::{FjallBinaryResult, FjallError, FjallOkResult, FjallRes, FjallResult},
+    database::DatabaseRsc,
 };
 use rustler::{Resource, ResourceArc};
 
-pub mod atom {
-    rustler::atoms! {
-        buffer,
-        sync_data,
-        sync_all,
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////
-// NIFs                                                                   //
-////////////////////////////////////////////////////////////////////////////
-
-#[rustler::nif]
-pub fn open_nif(
-    path: rustler::Binary,
-    options: Vec<(rustler::Atom, rustler::Term)>,
-) -> FjallResult<ResourceArc<KeyspaceRsc>> {
-    let result = (|| {
-        let path_str = decode_path(path)?;
-        let config = parse_config_options(path_str, options)?;
-        let keyspace = config.open().to_erlang_result()?;
-        Ok(ResourceArc::new(KeyspaceRsc(keyspace)))
-    })();
-    FjallResult(result)
-}
-
-#[rustler::nif]
-pub fn persist(keyspace: ResourceArc<KeyspaceRsc>, mode: rustler::Atom) -> FjallOkResult {
-    let result = (|| {
-        let persist_mode = if mode == atom::buffer() {
-            fjall::PersistMode::Buffer
-        } else if mode == atom::sync_data() {
-            fjall::PersistMode::SyncData
-        } else if mode == atom::sync_all() {
-            fjall::PersistMode::SyncAll
-        } else {
-            return Err(FjallError::Config(format!(
-                "Unknown persist mode: {:?}",
-                mode
-            )));
-        };
-        keyspace.0.persist(persist_mode).to_erlang_result()?;
-        Ok(())
-    })();
-    FjallOkResult(result)
-}
-
-////////////////////////////////////////////////////////////////////////////
-// Resources                                                              //
+// Keyspace Resource (formerly Partition)                                 //
 ////////////////////////////////////////////////////////////////////////////
 
 pub struct KeyspaceRsc(pub fjall::Keyspace);
@@ -61,3 +14,58 @@ impl std::panic::RefUnwindSafe for KeyspaceRsc {}
 
 #[rustler::resource_impl]
 impl Resource for KeyspaceRsc {}
+
+////////////////////////////////////////////////////////////////////////////
+// Keyspace NIFs                                                          //
+////////////////////////////////////////////////////////////////////////////
+
+#[rustler::nif]
+pub fn open_keyspace(
+    db: ResourceArc<DatabaseRsc>,
+    name: String,
+) -> FjallResult<ResourceArc<KeyspaceRsc>> {
+    let result = (|| {
+        let keyspace =
+            db.0.keyspace(&name, fjall::KeyspaceCreateOptions::default)
+                .to_erlang_result()?;
+        Ok(ResourceArc::new(KeyspaceRsc(keyspace)))
+    })();
+    FjallResult(result)
+}
+
+#[rustler::nif]
+pub fn insert(
+    keyspace: ResourceArc<KeyspaceRsc>,
+    key: rustler::Binary,
+    value: rustler::Binary,
+) -> FjallOkResult {
+    let result = (|| {
+        keyspace
+            .0
+            .insert(key.as_slice(), value.as_slice())
+            .to_erlang_result()?;
+        Ok(())
+    })();
+    FjallOkResult(result)
+}
+
+#[rustler::nif]
+pub fn get(keyspace: ResourceArc<KeyspaceRsc>, key: rustler::Binary) -> FjallBinaryResult {
+    let result = (|| {
+        let val = keyspace.0.get(key.as_slice()).to_erlang_result()?;
+        match val {
+            Some(value) => Ok(value.to_vec()),
+            None => Err(FjallError::NotFound),
+        }
+    })();
+    FjallBinaryResult(result)
+}
+
+#[rustler::nif]
+pub fn remove(keyspace: ResourceArc<KeyspaceRsc>, key: rustler::Binary) -> FjallOkResult {
+    let result = (|| {
+        keyspace.0.remove(key.as_slice()).to_erlang_result()?;
+        Ok(())
+    })();
+    FjallOkResult(result)
+}

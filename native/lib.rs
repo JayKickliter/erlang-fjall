@@ -1,7 +1,7 @@
 mod config;
+mod database;
 mod error;
 mod keyspace;
-mod partition;
 mod transaction;
 
 rustler::init!("fjall");

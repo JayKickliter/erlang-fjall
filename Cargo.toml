@@ -10,5 +10,5 @@ name       = "native"
 path       = "native/lib.rs"
 
 [dependencies]
-fjall   = "2"
+fjall   = "3"
 rustler = "0.36"
