@@ -62,35 +62,33 @@
     read_txn/0
 ]).
 
-%% Opaque handle to a Fjall database instance.
-%%
-%% Databases are root instances that can contain multiple keyspaces.
-%% Use `open/1' or `open/2' to create or open a database.
+-doc """
+Opaque handle to a Fjall database instance.
+
+Databases are root instances that can contain multiple keyspaces.
+Use `open/1' or `open/2' to create or open a database.
+""".
 -opaque database() :: reference().
 
-%% Opaque handle to a keyspace within a database.
-%%
-%% Keyspaces are logical separations of data within a database.
-%% Use `open_keyspace/2' to open a keyspace for key-value operations.
+-doc """
+Opaque handle to a keyspace within a database.
+
+Keyspaces are logical separations of data within a database.
+Use `open_keyspace/2` to open a keyspace for key-value operations.
+""".
 -opaque keyspace() :: reference().
 
-%% Configuration option for keyspace creation.
-%%
-%% Supported options:
-%% <ul>
-%%   <li>`{cache_size, pos_integer()}' - Total block cache size in bytes. Higher values
-%%       improve read performance but consume more memory. Default: 32MB</li>
-%%   <li>`{max_journaling_size, pos_integer()}' - Maximum write-ahead log (journal) size
-%%       in bytes. Older journals are cleaned up as needed. Default: 512MB</li>
-%%   <li>`{worker_threads, pos_integer()}' - Number of worker threads for background
-%%       maintenance (flushing and compaction). Default: min(CPU cores, 4)</li>
-%%   <li>`{max_cached_files, pos_integer()}' - Maximum number of cached file descriptors.
-%%       Default: 150 (macOS), 900 (Linux), 400 (Windows)</li>
-%%   <li>`{manual_journal_persist, boolean()}' - If `true', journal persistence is manual
-%%       and must be triggered explicitly. Default: `false'</li>
-%%   <li>`{temporary, boolean()}' - If `true', the keyspace is temporary and will be
-%%       deleted when closed. Default: `false'</li>
-%% </ul>
+-doc """
+Configuration option for database creation.
+
+Supported options:
+- `{cache_size, pos_integer()}` - Total block cache size in bytes. Higher values improve read performance but consume more memory. Default: 32MB
+- `{max_journaling_size, pos_integer()}` - Maximum write-ahead log (journal) size in bytes. Older journals are cleaned up as needed. Default: 512MB
+- `{worker_threads, pos_integer()}` - Number of worker threads for background maintenance (flushing and compaction). Default: min(CPU cores, 4)
+- `{max_cached_files, pos_integer()}` - Maximum number of cached file descriptors. Default: 150 (macOS), 900 (Linux), 400 (Windows)
+- `{manual_journal_persist, boolean()}` - If `true`, journal persistence is manual and must be triggered explicitly. Default: `false`
+- `{temporary, boolean()}` - If `true`, the database is temporary and will be deleted when closed. Default: `false`
+""".
 -type config_option() ::
     {manual_journal_persist, boolean()}
     | {worker_threads, pos_integer()}
@@ -99,46 +97,55 @@
     | {max_journaling_size, pos_integer()}
     | {temporary, boolean()}.
 
-%% Persist mode for keyspace persistence.
-%%
-%% Determines the durability guarantee when persisting a keyspace:
-%% <ul>
-%%   <li>`buffer' - Flush to OS buffers only. Data survives application crash
-%%       but not power loss or OS crash.</li>
-%%   <li>`sync_data' - Flush with fdatasync. Ensures data is written to disk,
-%%       suitable for most file systems.</li>
-%%   <li>`sync_all' - Flush with fsync. Strongest guarantee, ensuring both data
-%%       and metadata are written to disk.</li>
-%% </ul>
+-doc """
+Persist mode for database persistence.
+Determines the durability guarantee when persisting a database:
+<ul>
+  <li>`buffer` - Flush to OS buffers only. Data survives application crash
+      but not power loss or OS crash.</li>
+  <li>`sync_data` - Flush with fdatasync. Ensures data is written to disk,
+      suitable for most file systems.</li>
+  <li>`sync_all` - Flush with fsync. Strongest guarantee, ensuring both data
+      and metadata are written to disk.</li>
+</ul>
+""".
 -type persist_mode() ::
     buffer
     | sync_data
     | sync_all.
 
-%% Opaque handle to a transactional database instance.
-%%
-%% Transactional databases support ACID transactions for atomic
-%% multi-keyspace updates and snapshot-isolated reads.
-%% Use `open_txn/1' or `open_txn/2' to create a transactional database.
+-doc """
+Opaque handle to a transactional database instance.
+
+Transactional databases support ACID transactions for atomic
+multi-keyspace updates and snapshot-isolated reads.
+Use `open_txn/1` or `open_txn/2` to create a transactional database.
+""".
 -opaque txn_database() :: reference().
 
-%% Opaque handle to a keyspace in a transactional database.
-%%
-%% Used for operations within transactions. Accessed via
-%% `open_txn_keyspace/2'.
+-doc """
+Opaque handle to a keyspace in a transactional database.
+
+Used for operations within transactions. Accessed via
+`open_txn_keyspace/2`.
+""".
 -opaque txn_keyspace() :: reference().
 
-%% Opaque handle to a write transaction.
-%%
-%% Provides single-writer serialized transactions with read-your-own-writes
-%% semantics. Created with `begin_write_txn/1', must be committed with
-%% `commit_txn/1' or rolled back with `rollback_txn/1'.
+-doc """
+Opaque handle to a write transaction.
+
+Provides single-writer serialized transactions with read-your-own-writes
+semantics. Created with `begin_write_txn/1`, must be committed with
+`commit_txn/1` or rolled back with `rollback_txn/1`.
+""".
 -opaque write_txn() :: reference().
 
-%% Opaque handle to a read transaction (snapshot).
-%%
-%% Provides snapshot isolation with repeatable read semantics. Created
-%% with `begin_read_txn/1'. Read-only, no explicit commit/rollback needed.
+-doc """
+Opaque handle to a read transaction (snapshot).
+
+Provides snapshot isolation with repeatable read semantics. Created
+with `begin_read_txn/1`. Read-only, no explicit commit/rollback needed.
+""".
 -opaque read_txn() :: reference().
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
