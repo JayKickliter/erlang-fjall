@@ -58,6 +58,8 @@ settings. See `config_option/0` for available options.
     keyspace/0,
     config_option/0,
     persist_mode/0,
+    result/0,
+    result/1,
     txn_database/0,
     txn_keyspace/0,
     write_txn/0,
@@ -143,6 +145,16 @@ in the Rust documentation.
     | sync_all.
 
 -doc """
+Result type for operations that don't return a value on success.
+""".
+-type result() :: ok | {error, Reason :: term()}.
+
+-doc """
+Result type for operations that return a value on success.
+""".
+-type result(T) :: {ok, T} | {error, Reason :: term()}.
+
+-doc """
 Opaque handle to a transactional database instance.
 
 Transactional databases support ACID transactions for atomic
@@ -218,8 +230,7 @@ Common errors include:
 See [Database::open](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.open)
 in the Rust documentation.
 """.
--spec open(Path :: file:name_all()) ->
-    {ok, database()} | {error, term()}.
+-spec open(Path :: file:name_all()) -> result(database()).
 open(Path) ->
     open(Path, []).
 
@@ -249,13 +260,13 @@ Options = [
   in the Rust documentation
 """.
 -spec open(Path :: file:name_all(), Options :: [config_option()]) ->
-    {ok, database()} | {error, term()}.
+    result(database()).
 open(Path, Options) ->
     PathBinary = path_to_binary(Path),
     open_nif(PathBinary, Options).
 
 -spec open_nif(Path :: binary(), Options :: [config_option()]) ->
-    {ok, database()} | {error, term()}.
+    result(database()).
 open_nif(_Path, _Options) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -287,7 +298,7 @@ See [Database::keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#
 in the Rust documentation.
 """.
 -spec open_keyspace(Database :: database(), Name :: binary()) ->
-    {ok, keyspace()} | {error, term()}.
+    result(keyspace()).
 open_keyspace(_Database, _Name) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -314,7 +325,7 @@ See [Keyspace::insert](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#me
 in the Rust documentation.
 """.
 -spec insert(Keyspace :: keyspace(), Key :: binary(), Value :: binary()) ->
-    ok | {error, term()}.
+    result().
 insert(_Keyspace, _Key, _Value) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -345,8 +356,7 @@ end
 See [Keyspace::get](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.get)
 in the Rust documentation.
 """.
--spec get(Keyspace :: keyspace(), Key :: binary()) ->
-    {ok, binary()} | {error, term()}.
+-spec get(Keyspace :: keyspace(), Key :: binary()) -> result(binary()).
 get(_Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -370,8 +380,7 @@ ok = fjall:remove(Keyspace, <<"alice">>)
 See [Keyspace::remove](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.remove)
 in the Rust documentation.
 """.
--spec remove(Keyspace :: keyspace(), Key :: binary()) ->
-    ok | {error, term()}.
+-spec remove(Keyspace :: keyspace(), Key :: binary()) -> result().
 remove(_Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -409,8 +418,7 @@ ok = fjall:persist(Database, sync_all)
 See [Database::persist](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.persist)
 in the Rust documentation.
 """.
--spec persist(Database :: database(), Mode :: persist_mode()) ->
-    ok | {error, term()}.
+-spec persist(Database :: database(), Mode :: persist_mode()) -> result().
 persist(_Database, _Mode) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -430,8 +438,7 @@ See `open/1` for path handling and error information.
 See [SingleWriterTxDatabase::open](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.open)
 in the Rust documentation.
 """.
--spec open_txn(Path :: file:name_all()) ->
-    {ok, txn_database()} | {error, term()}.
+-spec open_txn(Path :: file:name_all()) -> result(txn_database()).
 open_txn(Path) ->
     open_txn(Path, []).
 
@@ -446,13 +453,13 @@ See [SingleWriterTxDatabase::open](https://docs.rs/fjall/3.0.1/fjall/struct.Sing
 in the Rust documentation.
 """.
 -spec open_txn(Path :: file:name_all(), Options :: [config_option()]) ->
-    {ok, txn_database()} | {error, term()}.
+    result(txn_database()).
 open_txn(Path, Options) ->
     PathBinary = path_to_binary(Path),
     open_txn_nif(PathBinary, Options).
 
 -spec open_txn_nif(Path :: binary(), Options :: [config_option()]) ->
-    {ok, txn_database()} | {error, term()}.
+    result(txn_database()).
 open_txn_nif(_Path, _Options) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -466,7 +473,7 @@ See [SingleWriterTxDatabase::keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.
 in the Rust documentation.
 """.
 -spec open_txn_keyspace(Database :: txn_database(), Name :: binary()) ->
-    {ok, txn_keyspace()} | {error, term()}.
+    result(txn_keyspace()).
 open_txn_keyspace(_Database, _Name) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -502,8 +509,7 @@ ok = fjall:commit_txn(Txn)  % Both inserts are now atomic
 See [SingleWriterTxDatabase::write_tx](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.write_tx)
 in the Rust documentation.
 """.
--spec begin_write_txn(Database :: txn_database()) ->
-    {ok, write_txn()} | {error, term()}.
+-spec begin_write_txn(Database :: txn_database()) -> result(write_txn()).
 begin_write_txn(_Database) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -539,8 +545,7 @@ Read transactions provide:
 See [SingleWriterTxDatabase::read_tx](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.read_tx)
 in the Rust documentation.
 """.
--spec begin_read_txn(Database :: txn_database()) ->
-    {ok, read_txn()} | {error, term()}.
+-spec begin_read_txn(Database :: txn_database()) -> result(read_txn()).
 begin_read_txn(_Database) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -562,8 +567,7 @@ in the Rust documentation.
     Keyspace :: txn_keyspace(),
     Key :: binary(),
     Value :: binary()
-) ->
-    ok | {error, term()}.
+) -> result().
 txn_insert(_Txn, _Keyspace, _Key, _Value) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -584,7 +588,7 @@ See [SingleWriterWriteTx::get](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWr
 in the Rust documentation.
 """.
 -spec txn_get(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
-    {ok, binary()} | {error, term()}.
+    result(binary()).
 txn_get(_Txn, _Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -598,7 +602,7 @@ See [SingleWriterWriteTx::remove](https://docs.rs/fjall/3.0.1/fjall/struct.Singl
 in the Rust documentation.
 """.
 -spec txn_remove(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
-    ok | {error, term()}.
+    result().
 txn_remove(_Txn, _Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -613,7 +617,7 @@ See [Snapshot::get](https://docs.rs/fjall/3.0.1/fjall/struct.Snapshot.html#metho
 in the Rust documentation.
 """.
 -spec read_txn_get(Txn :: read_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
-    {ok, binary()} | {error, term()}.
+    result(binary()).
 read_txn_get(_Txn, _Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -636,8 +640,7 @@ is no middle ground.
 See [SingleWriterWriteTx::commit](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.commit)
 in the Rust documentation.
 """.
--spec commit_txn(Txn :: write_txn()) ->
-    ok | {error, term()}.
+-spec commit_txn(Txn :: write_txn()) -> result().
 commit_txn(_Txn) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -655,8 +658,7 @@ committed or explicitly rolled back, automatic rollback occurs.
 See [SingleWriterWriteTx::rollback](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.rollback)
 in the Rust documentation.
 """.
--spec rollback_txn(Txn :: write_txn()) ->
-    ok | {error, term()}.
+-spec rollback_txn(Txn :: write_txn()) -> result().
 rollback_txn(_Txn) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
