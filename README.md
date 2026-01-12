@@ -1,3 +1,3 @@
-[![CI](https://github.com/JayKickliter/fjall-erl/actions/workflows/ci.yml/badge.svg)](https://github.com/JayKickliter/fjall-erl/actions/workflows/ci.yml) [API Docs](https://jaykickliter.github.io/fjall-erl/fjall.html)
+[![CI](https://github.com/JayKickliter/erlang-fjal/actions/workflows/ci.yml/badge.svg)](https://github.com/JayKickliter/erlang-fjall/actions/workflows/ci.yml) [API Docs](https://jaykickliter.github.io/erlang-fjall/fjall.html)
 
 # Erlang Fjall 
