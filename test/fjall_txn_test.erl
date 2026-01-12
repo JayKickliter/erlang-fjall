@@ -1,4 +1,5 @@
 -module(fjall_txn_test).
+-moduledoc false.
 -include_lib("eunit/include/eunit.hrl").
 
 -define(TXN_TEST_DB, "./test_txn_db_eunit").

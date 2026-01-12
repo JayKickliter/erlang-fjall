@@ -1,32 +1,34 @@
-%% @doc Fjall embedded key-value database for Erlang.
-%%
-%% This module provides a simple interface to the Fjall LSM-tree based
-%% key-value database. All keys and values are binaries.
-%%
-%% == Example ==
-%%
-%% ```
-%% {ok, Database} = fjall:open("./mydb"),
-%% {ok, Keyspace} = fjall:open_keyspace(Database, <<"default">>),
-%% ok = fjall:insert(Keyspace, <<"key">>, <<"value">>),
-%% {ok, <<"value">>} = fjall:get(Keyspace, <<"key">>),
-%% ok = fjall:remove(Keyspace, <<"key">>).
-%% '''
-%%
-%% == Databases and Keyspaces ==
-%%
-%% A database is a root instance with its own data and configuration.
-%% Within a database, you can create multiple keyspaces, which are
-%% logical separations of key-value data. Each keyspace maintains its
-%% own index and operations are independent.
-%%
-%% == Configuration Options ==
-%%
-%% When opening a database, you can pass configuration options to control
-%% behavior like cache size, worker thread counts, and journaling settings.
-%% See `config_option/0' for available options.
-
 -module(fjall).
+
+-moduledoc """
+Fjall embedded key-value database for Erlang.
+
+This module provides a simple interface to the Fjall LSM-tree based
+key-value database. All keys and values are binaries.
+
+## Example
+
+```
+{ok, Database} = fjall:open("./mydb"),
+{ok, Keyspace} = fjall:open_keyspace(Database, <<"default">>),
+ok = fjall:insert(Keyspace, <<"key">>, <<"value">>),
+{ok, <<"value">>} = fjall:get(Keyspace, <<"key">>),
+ok = fjall:remove(Keyspace, <<"key">>).
+```
+
+## Databases and Keyspaces
+
+A database is a root instance with its own data and
+configuration. Within a database, you can create multiple keyspaces,
+which are logical separations of key-value data. Each keyspace
+maintains its own index and operations are independent.
+
+## Configuration Options
+
+When opening a database, you can pass configuration options to control
+behavior like cache size, worker thread counts, and journaling
+settings. See `config_option/0` for available options.
+""".
 
 -on_load(load/0).
 
@@ -65,8 +67,8 @@
 -doc """
 Opaque handle to a Fjall database instance.
 
-Databases are root instances that can contain multiple keyspaces.
-Use `open/1' or `open/2' to create or open a database.
+Databases are root instances that can contain multiple keyspaces.  Use
+`open/1` or `open/2` to create or open a database.
 """.
 -opaque database() :: reference().
 
@@ -99,15 +101,15 @@ Supported options:
 
 -doc """
 Persist mode for database persistence.
+
 Determines the durability guarantee when persisting a database:
-<ul>
-  <li>`buffer` - Flush to OS buffers only. Data survives application crash
-      but not power loss or OS crash.</li>
-  <li>`sync_data` - Flush with fdatasync. Ensures data is written to disk,
-      suitable for most file systems.</li>
-  <li>`sync_all` - Flush with fsync. Strongest guarantee, ensuring both data
-      and metadata are written to disk.</li>
-</ul>
+
+- `buffer` - Flush to OS buffers only. Data survives application crash
+  but not power loss or OS crash.
+- `sync_data` - Flush with fdatasync. Ensures data is written to disk,
+  suitable for most file systems.
+- `sync_all` - Flush with fsync. Strongest guarantee, ensuring both data
+  and metadata are written to disk.
 """.
 -type persist_mode() ::
     buffer
@@ -152,54 +154,57 @@ with `begin_read_txn/1`. Read-only, no explicit commit/rollback needed.
 %% Public API                                                             %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% @doc Opens a database at the given path with default configuration options.
-%%
-%% The path can be a string, binary, or atom representing a file system path.
-%% If the database already exists at the given path, it will be opened.
-%% Otherwise, a new database will be created.
-%%
-%% Returns `{ok, Database}' on success or `{error, Reason}' on failure.
-%%
-%% == Errors ==
-%%
-%% Common errors include:
-%% <ul>
-%%   <li>Permission denied - insufficient permissions to access the path</li>
-%%   <li>Invalid path - path contains invalid UTF-8 sequences</li>
-%%   <li>Disk error - I/O error when accessing the file system</li>
-%% </ul>
-%%
-%% == Example ==
-%%
-%% ```
-%% {ok, Database} = fjall:open("/var/lib/mydb")
-%% '''
+-doc """
+Opens a database at the given path with default configuration options.
+
+The path can be a string, binary, or atom representing a file system path.
+If the database already exists at the given path, it will be opened.
+Otherwise, a new database will be created.
+
+Returns `{ok, Database}` on success or `{error, Reason}` on failure.
+
+## Errors
+
+Common errors include:
+
+- Permission denied - insufficient permissions to access the path
+- Invalid path - path contains invalid UTF-8 sequences
+- Disk error - I/O error when accessing the file system
+
+## Example
+
+```erlang
+{ok, Database} = fjall:open("/var/lib/mydb")
+```
+""".
 -spec open(Path :: file:name_all()) ->
     {ok, database()} | {error, term()}.
 open(Path) ->
     open(Path, []).
 
-%% @doc Opens a database at the given path with custom configuration options.
-%%
-%% Configuration options allow fine-tuning of Fjall's behavior for specific
-%% workloads. Options are provided as a list of tuples. Unknown options will
-%% result in an error.
-%%
-%% Returns `{ok, Database}' on success or `{error, Reason}' on failure.
-%%
-%% == Example ==
-%%
-%% ```
-%% Options = [
-%%     {cache_size, 512 * 1024 * 1024},  % 512MB cache
-%%     {worker_threads, 4}  % 4 worker threads
-%% ],
-%% {ok, Database} = fjall:open("/var/lib/mydb", Options)
-%% '''
-%%
-%% == See Also ==
-%%
-%% `config_option/0' for available configuration options.
+-doc """
+Opens a database at the given path with custom configuration options.
+
+Configuration options allow fine-tuning of Fjall's behavior for specific
+workloads. Options are provided as a list of tuples. Unknown options will
+result in an error.
+
+Returns `{ok, Database}` on success or `{error, Reason}` on failure.
+
+## Example
+
+```erlang
+Options = [
+    {cache_size, 512 * 1024 * 1024},  % 512MB cache
+    {worker_threads, 4}  % 4 worker threads
+],
+{ok, Database} = fjall:open("/var/lib/mydb", Options)
+```
+
+## See Also
+
+See `t:config_option/0` for available configuration options.
+""".
 -spec open(Path :: file:name_all(), Options :: [config_option()]) ->
     {ok, database()} | {error, term()}.
 open(Path, Options) ->
@@ -211,143 +216,141 @@ open(Path, Options) ->
 open_nif(_Path, _Options) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Opens or creates a keyspace within a database.
-%%
-%% Keyspaces provide logical separation of data within a single database.
-%% If a keyspace with the given name already exists, it is opened.
-%% Otherwise, a new keyspace is created.
-%%
-%% The keyspace name must be a binary. Keyspace names are persistent and
-%% will be recovered when the database is reopened.
-%%
-%% Returns `{ok, Keyspace}' on success or `{error, Reason}' on failure.
-%%
-%% == Errors ==
-%%
-%% <ul>
-%%   <li>`{error, disk_error}' - I/O error when accessing keyspace data</li>
-%%   <li>`{error, corrupted}' - Keyspace data is corrupted</li>
-%% </ul>
-%%
-%% == Example ==
-%%
-%% ```
-%% {ok, Database} = fjall:open("./db"),
-%% {ok, Keyspace} = fjall:open_keyspace(Database, <<"users">>)
-%% '''
+-doc """
+Opens or creates a keyspace within a database.
+
+Keyspaces provide logical separation of data within a single database.
+If a keyspace with the given name already exists, it is opened.
+Otherwise, a new keyspace is created.
+
+The keyspace name must be a binary. Keyspace names are persistent and
+will be recovered when the database is reopened.
+
+Returns `{ok, Keyspace}` on success or `{error, Reason}` on failure.
+
+## Errors
+
+- `{error, disk_error}` - I/O error when accessing keyspace data
+- `{error, corrupted}` - Keyspace data is corrupted
+
+## Example
+
+```erlang
+{ok, Database} = fjall:open("./db"),
+{ok, Keyspace} = fjall:open_keyspace(Database, <<"users">>)
+```
+""".
 -spec open_keyspace(Database :: database(), Name :: binary()) ->
     {ok, keyspace()} | {error, term()}.
 open_keyspace(_Database, _Name) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Inserts or updates a key-value pair in the keyspace.
-%%
-%% If the key already exists, its value is overwritten.
-%% Both keys and values must be binaries.
-%%
-%% Returns `ok' on success or `{error, Reason}' on failure.
-%%
-%% == Errors ==
-%%
-%% <ul>
-%%   <li>`{error, disk_error}' - I/O error when writing to disk</li>
-%%   <li>`{error, out_of_memory}' - Insufficient memory to buffer the write</li>
-%% </ul>
-%%
-%% == Example ==
-%%
-%% ```
-%% ok = fjall:insert(Keyspace, <<"alice">>, <<"alice@example.com">>)
-%% '''
+-doc """
+Inserts or updates a key-value pair in the keyspace.
+
+If the key already exists, its value is overwritten. Both keys and
+values must be binaries.
+
+Returns `ok` on success or `{error, Reason}` on failure.
+
+## Errors
+
+- `{error, disk_error}` - I/O error when writing to disk
+- `{error, out_of_memory}` - Insufficient memory to buffer the write
+
+## Example
+
+```erlang
+ok = fjall:insert(Keyspace, <<"alice">>, <<"alice@example.com">>)
+```
+""".
 -spec insert(Keyspace :: keyspace(), Key :: binary(), Value :: binary()) ->
     ok | {error, term()}.
 insert(_Keyspace, _Key, _Value) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Retrieves the value associated with a key from the keyspace.
-%%
-%% Returns `{ok, Value}' if the key exists, or `{error, not_found}' if the
-%% key does not exist. Returns `{error, Reason}' on other errors.
-%%
-%% == Errors ==
-%%
-%% <ul>
-%%   <li>`{error, not_found}' - Key does not exist in the keyspace</li>
-%%   <li>`{error, disk_error}' - I/O error when reading from disk</li>
-%% </ul>
-%%
-%% == Example ==
-%%
-%% ```
-%% case fjall:get(Keyspace, <<"alice">>) of
-%%     {ok, Email} ->
-%%         io:format("Alice's email: ~s~n", [Email]);
-%%     {error, not_found} ->
-%%         io:format("Alice not found~n");
-%%     {error, Reason} ->
-%%         io:format("Error: ~p~n", [Reason])
-%% end
-%% '''
+-doc """
+Retrieves the value associated with a key from the keyspace.
+
+Returns `{ok, Value}` if the key exists, or `{error, not_found}` if
+the key does not exist. Returns `{error, Reason}` on other errors.
+
+## Errors
+
+- `{error, not_found}` - Key does not exist in the keyspace
+- `{error, disk_error}` - I/O error when reading from disk
+
+## Example
+
+```erlang
+case fjall:get(Keyspace, <<"alice">>) of
+    {ok, Email} ->
+        io:format("Alice's email: ~s~n", [Email]);
+    {error, not_found} ->
+        io:format("Alice not found~n");
+    {error, Reason} ->
+        io:format("Error: ~p~n", [Reason])
+end
+```
+""".
 -spec get(Keyspace :: keyspace(), Key :: binary()) ->
     {ok, binary()} | {error, term()}.
 get(_Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Removes a key-value pair from the keyspace.
-%%
-%% If the key does not exist, this is a no-op and still returns `ok'.
-%% Both keys and values must be binaries.
-%%
-%% Returns `ok' on success or `{error, Reason}' on failure.
-%%
-%% == Errors ==
-%%
-%% <ul>
-%%   <li>`{error, disk_error}' - I/O error when writing to disk</li>
-%% </ul>
-%%
-%% == Example ==
-%%
-%% ```
-%% ok = fjall:remove(Keyspace, <<"alice">>)
-%% '''
+-doc """
+Removes a key-value pair from the keyspace.
+
+If the key does not exist, this is a no-op and still returns `ok`.
+
+Returns `ok` on success or `{error, Reason}` on failure.
+
+## Errors
+
+- `{error, disk_error}` - I/O error when writing to disk
+
+## Example
+
+```erlang
+ok = fjall:remove(Keyspace, <<"alice">>)
+```
+""".
 -spec remove(Keyspace :: keyspace(), Key :: binary()) ->
     ok | {error, term()}.
 remove(_Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Persists the database to disk with the specified durability mode.
-%%
-%% This function flushes all in-memory data and journals to storage according
-%% to the specified persist mode. It is useful when you want to ensure all
-%% writes are durable, especially when using `{manual_journal_persist, true}'
-%% configuration.
-%%
-%% The persist mode controls the durability guarantee:
-%% <ul>
-%%   <li>`buffer' - Fastest, least durable. Suitable for data that can be
-%%       reconstructed after an application crash.</li>
-%%   <li>`sync_data' - Good balance of performance and durability. Recommended
-%%       for most applications.</li>
-%%   <li>`sync_all' - Slowest, most durable. Ensures both data and metadata
-%%       are written to disk. Recommended for critical data.</li>
-%% </ul>
-%%
-%% Returns `ok' on success or `{error, Reason}' on failure.
-%%
-%% == Errors ==
-%%
-%% <ul>
-%%   <li>`{error, disk_error}' - I/O error when writing to disk</li>
-%% </ul>
-%%
-%% == Example ==
-%%
-%% ```
-%% {ok, Database} = fjall:open("./db"),
-%% ok = fjall:insert(Keyspace, <<"key">>, <<"value">>),
-%% ok = fjall:persist(Database, sync_all)
-%% '''
+-doc """
+Persists the database to disk with the specified durability mode.
+
+This function flushes all in-memory data and journals to storage
+according to the specified persist mode. It is useful when you want
+to ensure all writes are durable, especially when using
+`{manual_journal_persist, true}` configuration.
+
+The persist mode controls the durability guarantee:
+
+- `buffer` - Fastest, least durable. Suitable for data that can be
+  reconstructed after an application crash.
+- `sync_data` - Good balance of performance and durability.
+  Recommended for most applications.
+- `sync_all` - Slowest, most durable. Ensures both data and metadata
+  are written to disk. Recommended for critical data.
+
+Returns `ok` on success or `{error, Reason}` on failure.
+
+## Errors
+
+- `{error, disk_error}` - I/O error when writing to disk
+
+## Example
+
+```erlang
+{ok, Database} = fjall:open("./db"),
+ok = fjall:insert(Keyspace, <<"key">>, <<"value">>),
+ok = fjall:persist(Database, sync_all)
+```
+""".
 -spec persist(Database :: database(), Mode :: persist_mode()) ->
     ok | {error, term()}.
 persist(_Database, _Mode) ->
@@ -357,22 +360,27 @@ persist(_Database, _Mode) ->
 %% Transactional API                                                      %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% @doc Opens a transactional database at the given path with default configuration.
-%%
-%% Returns a transactional database that supports ACID transactions for
-%% atomic multi-keyspace writes and snapshot-isolated reads.
-%%
-%% See `open/1' for path handling and error information.
+-doc """
+Opens a transactional database at the given path with default
+configuration.
+
+Returns a transactional database that supports ACID transactions for
+atomic multi-keyspace writes and snapshot-isolated reads.
+
+See `open/1` for path handling and error information.
+""".
 -spec open_txn(Path :: file:name_all()) ->
     {ok, txn_database()} | {error, term()}.
 open_txn(Path) ->
     open_txn(Path, []).
 
-%% @doc Opens a transactional database with configuration options.
-%%
-%% Accepts the same configuration options as `open/2'. The transactional
-%% database can be used for both transactional and non-transactional
-%% keyspace operations.
+-doc """
+Opens a transactional database with configuration options.
+
+Accepts the same configuration options as `open/2`. The transactional
+database can be used for both transactional and non-transactional
+keyspace operations.
+""".
 -spec open_txn(Path :: file:name_all(), Options :: [config_option()]) ->
     {ok, txn_database()} | {error, term()}.
 open_txn(Path, Options) ->
@@ -384,80 +392,95 @@ open_txn(Path, Options) ->
 open_txn_nif(_Path, _Options) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Opens or creates a keyspace in a transactional database.
-%%
-%% Returns a keyspace handle for use in transactions. Like `open_keyspace/2'
-%% but for use with transactional databases.
+-doc """
+Opens or creates a keyspace in a transactional database.
+
+Returns a keyspace handle for use in transactions. Like
+`open_keyspace/2` but for use with transactional databases.
+""".
 -spec open_txn_keyspace(Database :: txn_database(), Name :: binary()) ->
     {ok, txn_keyspace()} | {error, term()}.
 open_txn_keyspace(_Database, _Name) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Begins a write transaction on the database.
-%%
-%% Returns a transaction handle that can be used for atomic multi-keyspace
-%% writes. The transaction must be explicitly committed with `commit_txn/1'
-%% or rolled back with `rollback_txn/1'. If neither is called, automatic
-%% rollback occurs when the transaction is garbage collected.
-%%
-%% == Semantics ==
-%%
-%% Write transactions provide:
-%% - <b>Read-your-own-writes (RYOW)</b>: Reads within the transaction see
-%%   uncommitted writes by the same transaction.
-%% - <b>Atomicity</b>: All writes commit or none do.
-%% - <b>Single-writer serialization</b>: Transactions are serialized per database.
-%% - <b>Cross-keyspace atomicity</b>: Can update multiple keyspaces atomically.
-%%
-%% == Example ==
-%%
-%% ```
-%% {ok, Txn} = fjall:begin_write_txn(Database),
-%% ok = fjall:txn_insert(Txn, Keyspace1, <<"key1">>, <<"value1">>),
-%% ok = fjall:txn_insert(Txn, Keyspace2, <<"key2">>, <<"value2">>),
-%% ok = fjall:commit_txn(Txn)  % Both inserts are now atomic
-%% '''
+-doc """
+Begins a write transaction on the database.
+
+Returns a transaction handle that can be used for atomic multi-keyspace
+writes. The transaction must be explicitly committed with `commit_txn/1`
+or rolled back with `rollback_txn/1`. If neither is called, automatic
+rollback occurs when the transaction is garbage collected.
+
+## Semantics
+
+Write transactions provide:
+
+- **Read-your-own-writes (RYOW)**: Reads within the transaction see
+  uncommitted writes by the same transaction.
+- **Atomicity**: All writes commit or none do.
+- **Single-writer serialization**: Transactions are serialized per
+  database.
+- **Cross-keyspace atomicity**: Can update multiple keyspaces
+  atomically.
+
+## Example
+
+```erlang
+{ok, Txn} = fjall:begin_write_txn(Database),
+ok = fjall:txn_insert(Txn, Keyspace1, <<"key1">>, <<"value1">>),
+ok = fjall:txn_insert(Txn, Keyspace2, <<"key2">>, <<"value2">>),
+ok = fjall:commit_txn(Txn)  % Both inserts are now atomic
+```
+""".
 -spec begin_write_txn(Database :: txn_database()) ->
     {ok, write_txn()} | {error, term()}.
 begin_write_txn(_Database) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Begins a read transaction (snapshot) on the database.
-%%
-%% Returns a read-only transaction handle that sees a consistent point-in-time
-%% view of the data. Multiple read transactions can run concurrently.
-%%
-%% == Semantics ==
-%%
-%% Read transactions provide:
-%% - <b>Snapshot isolation</b>: The transaction sees a consistent point-in-time view
-%%   that remains unchanged for the lifetime of the transaction.
-%% - <b>Repeatable reads</b>: Reading the same key multiple times returns the same value.
-%% - <b>No dirty reads</b>: Only sees committed data.
-%% - <b>Read-only</b>: No modifications allowed.
-%%
-%% == Example ==
-%%
-%% ```
-%% {ok, ReadTxn} = fjall:begin_read_txn(Database),
-%% {ok, Value1} = fjall:read_txn_get(ReadTxn, Keyspace, <<"key1">>),
-%% % Even if another write happens now:
-%% % {ok, Value2} = fjall:read_txn_get(ReadTxn, Keyspace, <<"key2">>)
-%% % ReadTxn still sees its original snapshot
-%% '''
+-doc """
+Begins a read transaction (snapshot) on the database.
+
+Returns a read-only transaction handle that sees a consistent
+point-in-time view of the data. Multiple read transactions can run
+concurrently.
+
+## Semantics
+
+Read transactions provide:
+
+- **Snapshot isolation**: The transaction sees a consistent
+  point-in-time view that remains unchanged for the lifetime of the
+  transaction.
+- **Repeatable reads**: Reading the same key multiple times returns
+  the same value.
+- **No dirty reads**: Only sees committed data.
+- **Read-only**: No modifications allowed.
+
+## Example
+
+```erlang
+{ok, ReadTxn} = fjall:begin_read_txn(Database),
+{ok, Value1} = fjall:read_txn_get(ReadTxn, Keyspace, <<"key1">>),
+% Even if another write happens now:
+% {ok, Value2} = fjall:read_txn_get(ReadTxn, Keyspace, <<"key2">>)
+% ReadTxn still sees its original snapshot
+```
+""".
 -spec begin_read_txn(Database :: txn_database()) ->
     {ok, read_txn()} | {error, term()}.
 begin_read_txn(_Database) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Inserts or updates a key-value pair within a write transaction.
-%%
-%% If the key already exists, its value is updated. The write is visible
-%% to subsequent reads within the same transaction (read-your-own-writes).
-%%
-%% Returns `ok' on success or `{error, Reason}' on failure. The transaction
-%% is not automatically rolled back on error; the caller must decide whether
-%% to commit or rollback.
+-doc """
+Inserts or updates a key-value pair within a write transaction.
+
+If the key already exists, its value is updated. The write is visible
+to subsequent reads within the same transaction (read-your-own-writes).
+
+Returns `ok` on success or `{error, Reason}` on failure. The
+transaction is not automatically rolled back on error; the caller
+must decide whether to commit or rollback.
+""".
 -spec txn_insert(
     Txn :: write_txn(),
     Keyspace :: txn_keyspace(),
@@ -468,66 +491,79 @@ begin_read_txn(_Database) ->
 txn_insert(_Txn, _Keyspace, _Key, _Value) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Retrieves a value from a write transaction.
-%%
-%% Returns the value if it exists (including writes made earlier in the same
-%% transaction). Returns `{error, not_found}' if the key doesn't exist.
-%%
-%% == Read-Your-Own-Writes ==
-%%
-%% If the key was inserted or updated earlier in the same transaction,
-%% this returns that value. Otherwise, it returns the value from the
-%% database at transaction start time.
+-doc """
+Retrieves a value from a write transaction.
+
+Returns the value if it exists (including writes made earlier in the
+same transaction). Returns `{error, not_found}` if the key doesn't
+exist.
+
+## Read-Your-Own-Writes
+
+If the key was inserted or updated earlier in the same transaction,
+this returns that value. Otherwise, it returns the value from the
+database at transaction start time.
+""".
 -spec txn_get(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
     {ok, binary()} | {error, term()}.
 txn_get(_Txn, _Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Removes a key from a write transaction.
-%%
-%% If the key doesn't exist, this is a no-op and returns `ok'.
-%% The removal is visible to subsequent reads in the same transaction.
+-doc """
+Removes a key from a write transaction.
+
+If the key doesn't exist, this is a no-op and returns `ok`. The
+removal is visible to subsequent reads in the same transaction.
+""".
 -spec txn_remove(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
     ok | {error, term()}.
 txn_remove(_Txn, _Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Retrieves a value from a read transaction (snapshot).
-%%
-%% Returns the value if it exists in the snapshot, or `{error, not_found}'
-%% if it doesn't. All reads in the same read transaction see the same
-%% snapshot, regardless of concurrent writes.
+-doc """
+Retrieves a value from a read transaction (snapshot).
+
+Returns the value if it exists in the snapshot, or `{error, not_found}`
+if it doesn't. All reads in the same read transaction see the same
+snapshot, regardless of concurrent writes.
+""".
 -spec read_txn_get(Txn :: read_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
     {ok, binary()} | {error, term()}.
 read_txn_get(_Txn, _Keyspace, _Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Commits a write transaction, making all changes durable.
-%%
-%% Atomically applies all changes made in the transaction. On success,
-%% returns `ok'. On failure, returns an error and the transaction is rolled back.
-%%
-%% After commit, the transaction handle is invalid and cannot be used for
-%% further operations (will return `{error, transaction_already_finalized}').
-%%
-%% == Atomicity Guarantee ==
-%%
-%% Either all writes in the transaction are applied, or none are. There is
-%% no middle ground.
+-doc """
+Commits a write transaction, making all changes durable.
+
+Atomically applies all changes made in the transaction. On success,
+returns `ok`. On failure, returns an error and the transaction is
+rolled back.
+
+After commit, the transaction handle is invalid and cannot be used
+for further operations (will return
+`{error, transaction_already_finalized}`).
+
+## Atomicity Guarantee
+
+Either all writes in the transaction are applied, or none are. There
+is no middle ground.
+""".
 -spec commit_txn(Txn :: write_txn()) ->
     ok | {error, term()}.
 commit_txn(_Txn) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-%% @doc Rolls back a write transaction, discarding all changes.
-%%
-%% After rollback, the transaction handle is invalid and cannot be used
-%% for further operations.
-%%
-%% == Note ==
-%%
-%% Rollback is optional. If a transaction is dropped without being
-%% committed or explicitly rolled back, automatic rollback occurs.
+-doc """
+Rolls back a write transaction, discarding all changes.
+
+After rollback, the transaction handle is invalid and cannot be used
+for further operations.
+
+## Note
+
+Rollback is optional. If a transaction is dropped without being
+committed or explicitly rolled back, automatic rollback occurs.
+""".
 -spec rollback_txn(Txn :: write_txn()) ->
     ok | {error, term()}.
 rollback_txn(_Txn) ->

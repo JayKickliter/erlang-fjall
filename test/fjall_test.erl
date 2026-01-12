@@ -1,4 +1,5 @@
 -module(fjall_test).
+-moduledoc false.
 -include_lib("eunit/include/eunit.hrl").
 
 -define(TEST_DB, "./test_db_eunit").
