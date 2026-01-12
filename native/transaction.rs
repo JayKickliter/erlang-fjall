@@ -16,7 +16,7 @@ pub mod atom {
 ////////////////////////////////////////////////////////////////////////////
 
 /// Transactional database resource (OptimisticTxDatabase)
-pub struct TxDatabaseRsc(pub fjall::OptimisticTxDatabase);
+pub struct TxDatabaseRsc(fjall::OptimisticTxDatabase);
 
 impl std::panic::RefUnwindSafe for TxDatabaseRsc {}
 
@@ -24,11 +24,7 @@ impl std::panic::RefUnwindSafe for TxDatabaseRsc {}
 impl Resource for TxDatabaseRsc {}
 
 /// Transactional keyspace resource
-pub struct TxKeyspaceRsc {
-    pub keyspace: fjall::OptimisticTxKeyspace,
-    // Keep database alive during keyspace lifetime
-    _db_ref: ResourceArc<TxDatabaseRsc>,
-}
+pub struct TxKeyspaceRsc(fjall::OptimisticTxKeyspace);
 
 impl std::panic::RefUnwindSafe for TxKeyspaceRsc {}
 
@@ -39,20 +35,13 @@ impl Resource for TxKeyspaceRsc {}
 ///
 /// OptimisticTxDatabase::WriteTransaction has no lifetime constraints,
 /// so we can store it directly without any unsafe code.
-pub struct WriteTxnRsc {
-    txn: Mutex<Option<fjall::OptimisticWriteTx>>,
-    // Keep database alive during transaction lifetime
-    _db_ref: ResourceArc<TxDatabaseRsc>,
-}
+pub struct WriteTxnRsc(Mutex<Option<fjall::OptimisticWriteTx>>);
 
 impl WriteTxnRsc {
     /// Create a new write transaction
     fn new(db_ref: ResourceArc<TxDatabaseRsc>) -> Result<Self, FjallError> {
         let txn = db_ref.0.write_tx().to_erlang_result()?;
-        Ok(WriteTxnRsc {
-            txn: Mutex::new(Some(txn)),
-            _db_ref: db_ref,
-        })
+        Ok(WriteTxnRsc(Mutex::new(Some(txn))))
     }
 
     /// Borrow transaction mutably for read/write operations
@@ -61,7 +50,7 @@ impl WriteTxnRsc {
         F: FnOnce(&mut fjall::OptimisticWriteTx) -> Result<R, FjallError>,
     {
         let mut inner = self
-            .txn
+            .0
             .lock()
             .map_err(|_| FjallError::Config("Failed to acquire transaction lock".to_string()))?;
         match inner.as_mut() {
@@ -73,7 +62,7 @@ impl WriteTxnRsc {
     /// Take transaction for commit/rollback (consumes the transaction)
     fn take_txn(&self) -> Result<fjall::OptimisticWriteTx, FjallError> {
         let mut inner = self
-            .txn
+            .0
             .lock()
             .map_err(|_| FjallError::Config("Failed to acquire transaction lock".to_string()))?;
         inner.take().ok_or(FjallError::TransactionAlreadyFinalized)
@@ -99,8 +88,6 @@ impl Drop for WriteTxnRsc {
 /// consistent point-in-time views of the data.
 pub struct ReadTxnRsc {
     pub snapshot: fjall::Snapshot,
-    // Keep database alive during snapshot lifetime
-    _db_ref: ResourceArc<TxDatabaseRsc>,
 }
 
 impl std::panic::RefUnwindSafe for ReadTxnRsc {}
@@ -135,10 +122,7 @@ pub fn open_txn_keyspace(
         let keyspace =
             db.0.keyspace(&name, fjall::KeyspaceCreateOptions::default)
                 .to_erlang_result()?;
-        Ok(ResourceArc::new(TxKeyspaceRsc {
-            keyspace,
-            _db_ref: db,
-        }))
+        Ok(ResourceArc::new(TxKeyspaceRsc(keyspace)))
     })();
     FjallResult(result)
 }
@@ -161,7 +145,7 @@ pub fn txn_insert(
     value: rustler::Binary,
 ) -> FjallOkResult {
     let result = txn.with_txn_mut(|t| {
-        t.insert(&keyspace.keyspace, key.as_slice(), value.as_slice());
+        t.insert(&keyspace.0, key.as_slice(), value.as_slice());
         Ok(())
     });
     FjallOkResult(result)
@@ -175,9 +159,7 @@ pub fn txn_get(
 ) -> FjallBinaryResult {
     let result = txn.with_txn_mut(|t| {
         use fjall::Readable;
-        let val = t
-            .get(&keyspace.keyspace, key.as_slice())
-            .to_erlang_result()?;
+        let val = t.get(&keyspace.0, key.as_slice()).to_erlang_result()?;
         match val {
             Some(value) => Ok(value.to_vec()),
             None => Err(FjallError::NotFound),
@@ -193,7 +175,7 @@ pub fn txn_remove(
     key: rustler::Binary,
 ) -> FjallOkResult {
     let result = txn.with_txn_mut(|t| {
-        t.remove(&keyspace.keyspace, key.as_slice());
+        t.remove(&keyspace.0, key.as_slice());
         Ok(())
     });
     FjallOkResult(result)
@@ -226,10 +208,7 @@ pub fn rollback_txn(txn: ResourceArc<WriteTxnRsc>) -> FjallOkResult {
 #[rustler::nif]
 pub fn begin_read_txn(db: ResourceArc<TxDatabaseRsc>) -> FjallResult<ResourceArc<ReadTxnRsc>> {
     let snapshot = db.0.read_tx();
-    let read_txn = ReadTxnRsc {
-        snapshot,
-        _db_ref: db,
-    };
+    let read_txn = ReadTxnRsc { snapshot };
     FjallResult(Ok(ResourceArc::new(read_txn)))
 }
 
@@ -243,7 +222,7 @@ pub fn read_txn_get(
         use fjall::Readable;
         let val = snapshot_rsc
             .snapshot
-            .get(&keyspace.keyspace, key.as_slice())
+            .get(&keyspace.0, key.as_slice())
             .to_erlang_result()?;
         match val {
             Some(value) => Ok(value.to_vec()),
