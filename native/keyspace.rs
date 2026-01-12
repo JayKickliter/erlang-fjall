@@ -1,6 +1,6 @@
 use crate::{
-    error::{FjallBinaryResult, FjallError, FjallOkResult, FjallRes, FjallResult},
     database::DatabaseRsc,
+    error::{FjallBinaryResult, FjallError, FjallOkResult, FjallRes, FjallResult},
 };
 use rustler::{Resource, ResourceArc};
 
