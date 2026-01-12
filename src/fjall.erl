@@ -67,8 +67,11 @@ settings. See `config_option/0` for available options.
 -doc """
 Opaque handle to a Fjall database instance.
 
-Databases are root instances that can contain multiple keyspaces.  Use
+Databases are root instances that can contain multiple keyspaces. Use
 `open/1` or `open/2` to create or open a database.
+
+See [Database](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html)
+in the Rust documentation.
 """.
 -opaque database() :: reference().
 
@@ -77,6 +80,9 @@ Opaque handle to a keyspace within a database.
 
 Keyspaces are logical separations of data within a database.
 Use `open_keyspace/2` to open a keyspace for key-value operations.
+
+See [Keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html)
+in the Rust documentation.
 """.
 -opaque keyspace() :: reference().
 
@@ -84,12 +90,26 @@ Use `open_keyspace/2` to open a keyspace for key-value operations.
 Configuration option for database creation.
 
 Supported options:
-- `{cache_size, pos_integer()}` - Total block cache size in bytes. Higher values improve read performance but consume more memory. Default: 32MB
-- `{max_journaling_size, pos_integer()}` - Maximum write-ahead log (journal) size in bytes. Older journals are cleaned up as needed. Default: 512MB
-- `{worker_threads, pos_integer()}` - Number of worker threads for background maintenance (flushing and compaction). Default: min(CPU cores, 4)
-- `{max_cached_files, pos_integer()}` - Maximum number of cached file descriptors. Default: 150 (macOS), 900 (Linux), 400 (Windows)
-- `{manual_journal_persist, boolean()}` - If `true`, journal persistence is manual and must be triggered explicitly. Default: `false`
-- `{temporary, boolean()}` - If `true`, the database is temporary and will be deleted when closed. Default: `false`
+
+- `{cache_size, pos_integer()}` - Total block cache size in bytes.
+  Higher values improve read performance but consume more memory.
+  Default: 32MB
+- `{max_journaling_size, pos_integer()}` - Maximum write-ahead log
+  (journal) size in bytes. Older journals are cleaned up as needed.
+  Default: 512MB
+- `{worker_threads, pos_integer()}` - Number of worker threads for
+  background maintenance (flushing and compaction).
+  Default: min(CPU cores, 4)
+- `{max_cached_files, pos_integer()}` - Maximum number of cached file
+  descriptors. Default: 150 (macOS), 900 (Linux), 400 (Windows)
+- `{manual_journal_persist, boolean()}` - If `true`, journal
+  persistence is manual and must be triggered explicitly.
+  Default: `false`
+- `{temporary, boolean()}` - If `true`, the database is temporary and
+  will be deleted when closed. Default: `false`
+
+See [DatabaseBuilder](https://docs.rs/fjall/3.0.1/fjall/struct.DatabaseBuilder.html)
+in the Rust documentation for configuration methods.
 """.
 -type config_option() ::
     {manual_journal_persist, boolean()}
@@ -105,11 +125,17 @@ Persist mode for database persistence.
 Determines the durability guarantee when persisting a database:
 
 - `buffer` - Flush to OS buffers only. Data survives application crash
-  but not power loss or OS crash.
+  but not power loss or OS crash. See
+  [PersistMode::Buffer](https://docs.rs/fjall/3.0.1/fjall/enum.PersistMode.html#variant.Buffer).
 - `sync_data` - Flush with fdatasync. Ensures data is written to disk,
-  suitable for most file systems.
-- `sync_all` - Flush with fsync. Strongest guarantee, ensuring both data
-  and metadata are written to disk.
+  suitable for most file systems. See
+  [PersistMode::SyncData](https://docs.rs/fjall/3.0.1/fjall/enum.PersistMode.html#variant.SyncData).
+- `sync_all` - Flush with fsync. Strongest guarantee, ensuring both
+  data and metadata are written to disk. See
+  [PersistMode::SyncAll](https://docs.rs/fjall/3.0.1/fjall/enum.PersistMode.html#variant.SyncAll).
+
+See [PersistMode](https://docs.rs/fjall/3.0.1/fjall/enum.PersistMode.html)
+in the Rust documentation.
 """.
 -type persist_mode() ::
     buffer
@@ -122,6 +148,9 @@ Opaque handle to a transactional database instance.
 Transactional databases support ACID transactions for atomic
 multi-keyspace updates and snapshot-isolated reads.
 Use `open_txn/1` or `open_txn/2` to create a transactional database.
+
+See [SingleWriterTxDatabase](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html)
+in the Rust documentation.
 """.
 -opaque txn_database() :: reference().
 
@@ -130,6 +159,9 @@ Opaque handle to a keyspace in a transactional database.
 
 Used for operations within transactions. Accessed via
 `open_txn_keyspace/2`.
+
+See [Keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html)
+in the Rust documentation.
 """.
 -opaque txn_keyspace() :: reference().
 
@@ -139,6 +171,9 @@ Opaque handle to a write transaction.
 Provides single-writer serialized transactions with read-your-own-writes
 semantics. Created with `begin_write_txn/1`, must be committed with
 `commit_txn/1` or rolled back with `rollback_txn/1`.
+
+See [SingleWriterWriteTx](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html)
+in the Rust documentation.
 """.
 -opaque write_txn() :: reference().
 
@@ -147,6 +182,9 @@ Opaque handle to a read transaction (snapshot).
 
 Provides snapshot isolation with repeatable read semantics. Created
 with `begin_read_txn/1`. Read-only, no explicit commit/rollback needed.
+
+See [Snapshot](https://docs.rs/fjall/3.0.1/fjall/struct.Snapshot.html)
+in the Rust documentation.
 """.
 -opaque read_txn() :: reference().
 
@@ -157,9 +195,9 @@ with `begin_read_txn/1`. Read-only, no explicit commit/rollback needed.
 -doc """
 Opens a database at the given path with default configuration options.
 
-The path can be a string, binary, or atom representing a file system path.
-If the database already exists at the given path, it will be opened.
-Otherwise, a new database will be created.
+The path can be a string, binary, or atom representing a file system
+path. If the database already exists at the given path, it will be
+opened. Otherwise, a new database will be created.
 
 Returns `{ok, Database}` on success or `{error, Reason}` on failure.
 
@@ -176,6 +214,9 @@ Common errors include:
 ```erlang
 {ok, Database} = fjall:open("/var/lib/mydb")
 ```
+
+See [Database::open](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.open)
+in the Rust documentation.
 """.
 -spec open(Path :: file:name_all()) ->
     {ok, database()} | {error, term()}.
@@ -185,9 +226,9 @@ open(Path) ->
 -doc """
 Opens a database at the given path with custom configuration options.
 
-Configuration options allow fine-tuning of Fjall's behavior for specific
-workloads. Options are provided as a list of tuples. Unknown options will
-result in an error.
+Configuration options allow fine-tuning of Fjall's behavior for
+specific workloads. Options are provided as a list of tuples. Unknown
+options will result in an error.
 
 Returns `{ok, Database}` on success or `{error, Reason}` on failure.
 
@@ -203,7 +244,9 @@ Options = [
 
 ## See Also
 
-See `t:config_option/0` for available configuration options.
+- `t:config_option/0` for available configuration options
+- [Database::open](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.open)
+  in the Rust documentation
 """.
 -spec open(Path :: file:name_all(), Options :: [config_option()]) ->
     {ok, database()} | {error, term()}.
@@ -239,6 +282,9 @@ Returns `{ok, Keyspace}` on success or `{error, Reason}` on failure.
 {ok, Database} = fjall:open("./db"),
 {ok, Keyspace} = fjall:open_keyspace(Database, <<"users">>)
 ```
+
+See [Database::keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.keyspace)
+in the Rust documentation.
 """.
 -spec open_keyspace(Database :: database(), Name :: binary()) ->
     {ok, keyspace()} | {error, term()}.
@@ -263,6 +309,9 @@ Returns `ok` on success or `{error, Reason}` on failure.
 ```erlang
 ok = fjall:insert(Keyspace, <<"alice">>, <<"alice@example.com">>)
 ```
+
+See [Keyspace::insert](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.insert)
+in the Rust documentation.
 """.
 -spec insert(Keyspace :: keyspace(), Key :: binary(), Value :: binary()) ->
     ok | {error, term()}.
@@ -292,6 +341,9 @@ case fjall:get(Keyspace, <<"alice">>) of
         io:format("Error: ~p~n", [Reason])
 end
 ```
+
+See [Keyspace::get](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.get)
+in the Rust documentation.
 """.
 -spec get(Keyspace :: keyspace(), Key :: binary()) ->
     {ok, binary()} | {error, term()}.
@@ -314,6 +366,9 @@ Returns `ok` on success or `{error, Reason}` on failure.
 ```erlang
 ok = fjall:remove(Keyspace, <<"alice">>)
 ```
+
+See [Keyspace::remove](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.remove)
+in the Rust documentation.
 """.
 -spec remove(Keyspace :: keyspace(), Key :: binary()) ->
     ok | {error, term()}.
@@ -350,6 +405,9 @@ Returns `ok` on success or `{error, Reason}` on failure.
 ok = fjall:insert(Keyspace, <<"key">>, <<"value">>),
 ok = fjall:persist(Database, sync_all)
 ```
+
+See [Database::persist](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.persist)
+in the Rust documentation.
 """.
 -spec persist(Database :: database(), Mode :: persist_mode()) ->
     ok | {error, term()}.
@@ -368,6 +426,9 @@ Returns a transactional database that supports ACID transactions for
 atomic multi-keyspace writes and snapshot-isolated reads.
 
 See `open/1` for path handling and error information.
+
+See [SingleWriterTxDatabase::open](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.open)
+in the Rust documentation.
 """.
 -spec open_txn(Path :: file:name_all()) ->
     {ok, txn_database()} | {error, term()}.
@@ -380,6 +441,9 @@ Opens a transactional database with configuration options.
 Accepts the same configuration options as `open/2`. The transactional
 database can be used for both transactional and non-transactional
 keyspace operations.
+
+See [SingleWriterTxDatabase::open](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.open)
+in the Rust documentation.
 """.
 -spec open_txn(Path :: file:name_all(), Options :: [config_option()]) ->
     {ok, txn_database()} | {error, term()}.
@@ -397,6 +461,9 @@ Opens or creates a keyspace in a transactional database.
 
 Returns a keyspace handle for use in transactions. Like
 `open_keyspace/2` but for use with transactional databases.
+
+See [SingleWriterTxDatabase::keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.keyspace)
+in the Rust documentation.
 """.
 -spec open_txn_keyspace(Database :: txn_database(), Name :: binary()) ->
     {ok, txn_keyspace()} | {error, term()}.
@@ -431,6 +498,9 @@ ok = fjall:txn_insert(Txn, Keyspace1, <<"key1">>, <<"value1">>),
 ok = fjall:txn_insert(Txn, Keyspace2, <<"key2">>, <<"value2">>),
 ok = fjall:commit_txn(Txn)  % Both inserts are now atomic
 ```
+
+See [SingleWriterTxDatabase::write_tx](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.write_tx)
+in the Rust documentation.
 """.
 -spec begin_write_txn(Database :: txn_database()) ->
     {ok, write_txn()} | {error, term()}.
@@ -465,6 +535,9 @@ Read transactions provide:
 % {ok, Value2} = fjall:read_txn_get(ReadTxn, Keyspace, <<"key2">>)
 % ReadTxn still sees its original snapshot
 ```
+
+See [SingleWriterTxDatabase::read_tx](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.read_tx)
+in the Rust documentation.
 """.
 -spec begin_read_txn(Database :: txn_database()) ->
     {ok, read_txn()} | {error, term()}.
@@ -480,6 +553,9 @@ to subsequent reads within the same transaction (read-your-own-writes).
 Returns `ok` on success or `{error, Reason}` on failure. The
 transaction is not automatically rolled back on error; the caller
 must decide whether to commit or rollback.
+
+See [SingleWriterWriteTx::insert](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.insert)
+in the Rust documentation.
 """.
 -spec txn_insert(
     Txn :: write_txn(),
@@ -503,6 +579,9 @@ exist.
 If the key was inserted or updated earlier in the same transaction,
 this returns that value. Otherwise, it returns the value from the
 database at transaction start time.
+
+See [SingleWriterWriteTx::get](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.get)
+in the Rust documentation.
 """.
 -spec txn_get(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
     {ok, binary()} | {error, term()}.
@@ -514,6 +593,9 @@ Removes a key from a write transaction.
 
 If the key doesn't exist, this is a no-op and returns `ok`. The
 removal is visible to subsequent reads in the same transaction.
+
+See [SingleWriterWriteTx::remove](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.remove)
+in the Rust documentation.
 """.
 -spec txn_remove(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
     ok | {error, term()}.
@@ -526,6 +608,9 @@ Retrieves a value from a read transaction (snapshot).
 Returns the value if it exists in the snapshot, or `{error, not_found}`
 if it doesn't. All reads in the same read transaction see the same
 snapshot, regardless of concurrent writes.
+
+See [Snapshot::get](https://docs.rs/fjall/3.0.1/fjall/struct.Snapshot.html#method.get)
+in the Rust documentation.
 """.
 -spec read_txn_get(Txn :: read_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
     {ok, binary()} | {error, term()}.
@@ -547,6 +632,9 @@ for further operations (will return
 
 Either all writes in the transaction are applied, or none are. There
 is no middle ground.
+
+See [SingleWriterWriteTx::commit](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.commit)
+in the Rust documentation.
 """.
 -spec commit_txn(Txn :: write_txn()) ->
     ok | {error, term()}.
@@ -563,6 +651,9 @@ for further operations.
 
 Rollback is optional. If a transaction is dropped without being
 committed or explicitly rolled back, automatic rollback occurs.
+
+See [SingleWriterWriteTx::rollback](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.rollback)
+in the Rust documentation.
 """.
 -spec rollback_txn(Txn :: write_txn()) ->
     ok | {error, term()}.
