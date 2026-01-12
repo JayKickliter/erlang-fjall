@@ -396,11 +396,11 @@ open_txn_keyspace(_Database, _Name) ->
 %% == Semantics ==
 %%
 %% Write transactions provide:
-%% - **Read-your-own-writes (RYOW)**: Reads within the transaction see
+%% - <b>Read-your-own-writes (RYOW)</b>: Reads within the transaction see
 %%   uncommitted writes by the same transaction.
-%% - **Atomicity**: All writes commit or none do.
-%% - **Single-writer serialization**: Transactions are serialized per database.
-%% - **Cross-keyspace atomicity**: Can update multiple keyspaces atomically.
+%% - <b>Atomicity</b>: All writes commit or none do.
+%% - <b>Single-writer serialization</b>: Transactions are serialized per database.
+%% - <b>Cross-keyspace atomicity</b>: Can update multiple keyspaces atomically.
 %%
 %% == Example ==
 %%
@@ -423,11 +423,11 @@ begin_write_txn(_Database) ->
 %% == Semantics ==
 %%
 %% Read transactions provide:
-%% - **Snapshot isolation**: The transaction sees a consistent point-in-time view
+%% - <b>Snapshot isolation</b>: The transaction sees a consistent point-in-time view
 %%   that remains unchanged for the lifetime of the transaction.
-%% - **Repeatable reads**: Reading the same key multiple times returns the same value.
-%% - **No dirty reads**: Only sees committed data.
-%% - **Read-only**: No modifications allowed.
+%% - <b>Repeatable reads</b>: Reading the same key multiple times returns the same value.
+%% - <b>No dirty reads</b>: Only sees committed data.
+%% - <b>Read-only</b>: No modifications allowed.
 %%
 %% == Example ==
 %%
