@@ -6,23 +6,23 @@
 %% == Example ==
 %%
 %% ```
-%% {ok, Keyspace} = fjall:open("./mydb"),
-%% {ok, Partition} = fjall:open_partition(Keyspace, <<"default">>),
-%% ok = fjall:insert(Partition, <<"key">>, <<"value">>),
-%% {ok, <<"value">>} = fjall:get(Partition, <<"key">>),
-%% ok = fjall:remove(Partition, <<"key">>).
+%% {ok, Database} = fjall:open("./mydb"),
+%% {ok, Keyspace} = fjall:open_keyspace(Database, <<"default">>),
+%% ok = fjall:insert(Keyspace, <<"key">>, <<"value">>),
+%% {ok, <<"value">>} = fjall:get(Keyspace, <<"key">>),
+%% ok = fjall:remove(Keyspace, <<"key">>).
 %% '''
 %%
-%% == Keyspaces and Partitions ==
+%% == Databases and Keyspaces ==
 %%
-%% A keyspace is a database instance with its own data and configuration.
-%% Within a keyspace, you can create multiple partitions, which are
-%% logical separations of key-value data. Each partition maintains its
+%% A database is a root instance with its own data and configuration.
+%% Within a database, you can create multiple keyspaces, which are
+%% logical separations of key-value data. Each keyspace maintains its
 %% own index and operations are independent.
 %%
 %% == Configuration Options ==
 %%
-%% When opening a keyspace, you can pass configuration options to control
+%% When opening a database, you can pass configuration options to control
 %% behavior like cache size, worker thread counts, and journaling settings.
 %% See `config_option/0' for available options.
 
