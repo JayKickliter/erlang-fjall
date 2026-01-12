@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
-        otp: [27]
+        otp: [28]
 
     steps:
     - uses: actions/checkout@v2
