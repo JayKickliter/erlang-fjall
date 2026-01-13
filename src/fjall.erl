@@ -497,6 +497,13 @@ writes. The transaction must be explicitly committed with `commit_txn/1`
 or rolled back with `rollback_txn/1`. If neither is called, automatic
 rollback occurs when the transaction is garbage collected.
 
+## Optimistic Concurrency Control
+
+Transactions use optimistic concurrency control. Multiple transactions
+can run concurrently, but conflicts are detected at commit time. If a
+key read by this transaction was modified by another committed
+transaction, `commit_txn/1` returns `{error, transaction_conflict}`.
+
 ## Semantics
 
 Write transactions provide:
@@ -504,10 +511,10 @@ Write transactions provide:
 - **Read-your-own-writes (RYOW)**: Reads within the transaction see
   uncommitted writes by the same transaction.
 - **Atomicity**: All writes commit or none do.
-- **Single-writer serialization**: Transactions are serialized per
-  database.
 - **Cross-keyspace atomicity**: Can update multiple keyspaces
   atomically.
+- **Optimistic locking**: Conflicts detected at commit time, not
+  during reads/writes.
 
 ## Example
 
@@ -643,6 +650,15 @@ rolled back.
 After commit, the transaction handle is invalid and cannot be used
 for further operations (will return
 `{error, transaction_already_finalized}`).
+
+## Errors
+
+- `{error, transaction_conflict}` - A concurrent transaction modified
+  a key that was read by this transaction. The transaction is rolled
+  back; retry the operation if appropriate.
+- `{error, transaction_already_finalized}` - The transaction was
+  already committed or rolled back.
+- `{error, Reason}` - I/O error when writing to disk.
 
 ## Atomicity Guarantee
 
