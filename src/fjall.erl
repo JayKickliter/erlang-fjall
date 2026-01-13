@@ -54,16 +54,17 @@ settings. See `config_option/0` for available options.
 ]).
 
 -export_type([
+    compression/0,
+    config_option/0,
     database/0,
     keyspace/0,
-    config_option/0,
     persist_mode/0,
+    read_txn/0,
     result/0,
     result/1,
     txn_database/0,
     txn_keyspace/0,
-    write_txn/0,
-    read_txn/0
+    write_txn/0
 ]).
 
 -doc """
@@ -89,6 +90,14 @@ in the Rust documentation.
 -opaque keyspace() :: reference().
 
 -doc """
+Compression type for journal entries.
+
+See [CompressionType](https://docs.rs/fjall/3.0.1/fjall/enum.CompressionType.html)
+in the Rust documentation.
+""".
+-type compression() :: lz4 | none.
+
+-doc """
 Configuration option for database creation.
 
 Supported options:
@@ -96,30 +105,33 @@ Supported options:
 - `{cache_size, pos_integer()}` - Total block cache size in bytes.
   Higher values improve read performance but consume more memory.
   Default: 32MB
-- `{max_journaling_size, pos_integer()}` - Maximum write-ahead log
-  (journal) size in bytes. Older journals are cleaned up as needed.
-  Default: 512MB
-- `{worker_threads, pos_integer()}` - Number of worker threads for
-  background maintenance (flushing and compaction).
-  Default: min(CPU cores, 4)
-- `{max_cached_files, pos_integer()}` - Maximum number of cached file
-  descriptors. Default: 150 (macOS), 900 (Linux), 400 (Windows)
+- `{journal_compression, compression()}` - Compression type for large
+  values written to the journal. See `t:compression/0`. Default: `lz4`
 - `{manual_journal_persist, boolean()}` - If `true`, journal
   persistence is manual and must be triggered explicitly.
   Default: `false`
+- `{max_cached_files, pos_integer()}` - Maximum number of cached file
+  descriptors. Default: 150 (macOS), 900 (Linux), 400 (Windows)
+- `{max_journaling_size, pos_integer()}` - Maximum write-ahead log
+  (journal) size in bytes. Older journals are cleaned up as needed.
+  Default: 512MB
 - `{temporary, boolean()}` - If `true`, the database is temporary and
   will be deleted when closed. Default: `false`
+- `{worker_threads, pos_integer()}` - Number of worker threads for
+  background maintenance (flushing and compaction).
+  Default: min(CPU cores, 4)
 
 See [DatabaseBuilder](https://docs.rs/fjall/3.0.1/fjall/struct.DatabaseBuilder.html)
 in the Rust documentation for configuration methods.
 """.
 -type config_option() ::
-    {manual_journal_persist, boolean()}
-    | {worker_threads, pos_integer()}
+    {cache_size, pos_integer()}
+    | {journal_compression, compression()}
+    | {manual_journal_persist, boolean()}
     | {max_cached_files, pos_integer()}
-    | {cache_size, pos_integer()}
     | {max_journaling_size, pos_integer()}
-    | {temporary, boolean()}.
+    | {temporary, boolean()}
+    | {worker_threads, pos_integer()}.
 
 -doc """
 Persist mode for database persistence.

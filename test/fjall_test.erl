@@ -36,6 +36,22 @@ open_database_with_options_test() ->
     ?assert(is_reference(Database)),
     teardown(ok).
 
+open_database_with_compression_lz4_test() ->
+    setup(),
+    {ok, Database} = fjall:open(?TEST_DB, [{journal_compression, lz4}]),
+    {ok, Keyspace} = fjall:open_keyspace(Database, <<"test">>),
+    ok = fjall:insert(Keyspace, <<"key">>, <<"value">>),
+    {ok, <<"value">>} = fjall:get(Keyspace, <<"key">>),
+    teardown(ok).
+
+open_database_with_compression_none_test() ->
+    setup(),
+    {ok, Database} = fjall:open(?TEST_DB, [{journal_compression, none}]),
+    {ok, Keyspace} = fjall:open_keyspace(Database, <<"test">>),
+    ok = fjall:insert(Keyspace, <<"key">>, <<"value">>),
+    {ok, <<"value">>} = fjall:get(Keyspace, <<"key">>),
+    teardown(ok).
+
 open_keyspace_test() ->
     setup(),
     {ok, Database} = fjall:open(?TEST_DB, []),
