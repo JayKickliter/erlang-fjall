@@ -2,6 +2,17 @@ use crate::error::FjallError;
 use fjall::DatabaseBuilder;
 use std::path::Path;
 
+mod atom {
+    rustler::atoms! {
+        manual_journal_persist,
+        worker_threads,
+        max_cached_files,
+        cache_size,
+        max_journaling_size,
+        temporary,
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////
 // Path Decoding                                                          //
 ////////////////////////////////////////////////////////////////////////////
@@ -23,38 +34,29 @@ pub fn parse_builder_options_database(
     let mut builder = fjall::Database::builder(Path::new(path));
 
     for (key, value) in options {
-        let key_str = format!("{:?}", key);
-        match key_str.as_str() {
-            "manual_journal_persist" => {
-                let val: bool = value.decode().map_err(FjallError::from)?;
-                builder = builder.manual_journal_persist(val);
-            }
-            "worker_threads" => {
-                let val: usize = value.decode().map_err(FjallError::from)?;
-                builder = builder.worker_threads(val);
-            }
-            "max_cached_files" => {
-                let val: usize = value.decode().map_err(FjallError::from)?;
-                builder = builder.max_cached_files(Some(val));
-            }
-            "cache_size" => {
-                let val: u64 = value.decode().map_err(FjallError::from)?;
-                builder = builder.cache_size(val);
-            }
-            "max_journaling_size" => {
-                let val: u64 = value.decode().map_err(FjallError::from)?;
-                builder = builder.max_journaling_size(val);
-            }
-            "temporary" => {
-                let val: bool = value.decode().map_err(FjallError::from)?;
-                builder = builder.temporary(val);
-            }
-            _ => {
-                return Err(FjallError::Config(format!(
-                    "Unknown config option: {:?}",
-                    key
-                )))
-            }
+        if key == atom::manual_journal_persist() {
+            let val: bool = value.decode().map_err(FjallError::from)?;
+            builder = builder.manual_journal_persist(val);
+        } else if key == atom::worker_threads() {
+            let val: usize = value.decode().map_err(FjallError::from)?;
+            builder = builder.worker_threads(val);
+        } else if key == atom::max_cached_files() {
+            let val: usize = value.decode().map_err(FjallError::from)?;
+            builder = builder.max_cached_files(Some(val));
+        } else if key == atom::cache_size() {
+            let val: u64 = value.decode().map_err(FjallError::from)?;
+            builder = builder.cache_size(val);
+        } else if key == atom::max_journaling_size() {
+            let val: u64 = value.decode().map_err(FjallError::from)?;
+            builder = builder.max_journaling_size(val);
+        } else if key == atom::temporary() {
+            let val: bool = value.decode().map_err(FjallError::from)?;
+            builder = builder.temporary(val);
+        } else {
+            return Err(FjallError::Config(format!(
+                "Unknown config option: {:?}",
+                key
+            )));
         }
     }
 
@@ -68,38 +70,29 @@ pub fn parse_builder_options_optimistic_tx(
     let mut builder = fjall::OptimisticTxDatabase::builder(Path::new(path));
 
     for (key, value) in options {
-        let key_str = format!("{:?}", key);
-        match key_str.as_str() {
-            "manual_journal_persist" => {
-                let val: bool = value.decode().map_err(FjallError::from)?;
-                builder = builder.manual_journal_persist(val);
-            }
-            "worker_threads" => {
-                let val: usize = value.decode().map_err(FjallError::from)?;
-                builder = builder.worker_threads(val);
-            }
-            "max_cached_files" => {
-                let val: usize = value.decode().map_err(FjallError::from)?;
-                builder = builder.max_cached_files(Some(val));
-            }
-            "cache_size" => {
-                let val: u64 = value.decode().map_err(FjallError::from)?;
-                builder = builder.cache_size(val);
-            }
-            "max_journaling_size" => {
-                let val: u64 = value.decode().map_err(FjallError::from)?;
-                builder = builder.max_journaling_size(val);
-            }
-            "temporary" => {
-                let val: bool = value.decode().map_err(FjallError::from)?;
-                builder = builder.temporary(val);
-            }
-            _ => {
-                return Err(FjallError::Config(format!(
-                    "Unknown config option: {:?}",
-                    key
-                )))
-            }
+        if key == atom::manual_journal_persist() {
+            let val: bool = value.decode().map_err(FjallError::from)?;
+            builder = builder.manual_journal_persist(val);
+        } else if key == atom::worker_threads() {
+            let val: usize = value.decode().map_err(FjallError::from)?;
+            builder = builder.worker_threads(val);
+        } else if key == atom::max_cached_files() {
+            let val: usize = value.decode().map_err(FjallError::from)?;
+            builder = builder.max_cached_files(Some(val));
+        } else if key == atom::cache_size() {
+            let val: u64 = value.decode().map_err(FjallError::from)?;
+            builder = builder.cache_size(val);
+        } else if key == atom::max_journaling_size() {
+            let val: u64 = value.decode().map_err(FjallError::from)?;
+            builder = builder.max_journaling_size(val);
+        } else if key == atom::temporary() {
+            let val: bool = value.decode().map_err(FjallError::from)?;
+            builder = builder.temporary(val);
+        } else {
+            return Err(FjallError::Config(format!(
+                "Unknown config option: {:?}",
+                key
+            )));
         }
     }
 
