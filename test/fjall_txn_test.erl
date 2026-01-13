@@ -1,8 +1,7 @@
 -module(fjall_txn_test).
--moduledoc false.
 -include_lib("eunit/include/eunit.hrl").
 
--define(TXN_TEST_DB, "./test_txn_db_eunit").
+-define(TXN_TEST_DB, "/tmp/test_txn_db_eunit").
 
 setup_txn_db() ->
     _ = os:cmd("rm -rf " ++ ?TXN_TEST_DB),
@@ -13,13 +12,11 @@ teardown_txn_db(_TxnDb) ->
     _ = os:cmd("rm -rf " ++ ?TXN_TEST_DB),
     ok.
 
-%% Test: Open transactional database with default options
 open_txn_database_test() ->
     setup_txn_db(),
     ?assert(true),
     teardown_txn_db(ok).
 
-%% Test: Open transactional database with options
 open_txn_with_options_test() ->
     TxnDb = setup_txn_db(),
     Options = [{cache_size, 1024 * 1024}],
@@ -27,14 +24,12 @@ open_txn_with_options_test() ->
     _ = os:cmd("rm -rf " ++ ?TXN_TEST_DB ++ "_2"),
     teardown_txn_db(TxnDb).
 
-%% Test: Open keyspace in transactional database
 open_txn_keyspace_test() ->
     TxnDb = setup_txn_db(),
     {ok, Ks} = fjall:open_txn_keyspace(TxnDb, <<"test_keyspace">>),
     ?assert(is_reference(Ks)),
     teardown_txn_db(TxnDb).
 
-%% Test: Write transaction with commit
 write_transaction_commit_test() ->
     TxnDb = setup_txn_db(),
     {ok, Ks} = fjall:open_txn_keyspace(TxnDb, <<"ks1">>),
@@ -52,7 +47,6 @@ write_transaction_commit_test() ->
 
     teardown_txn_db(TxnDb).
 
-%% Test: Write transaction with explicit rollback
 write_transaction_rollback_test() ->
     TxnDb = setup_txn_db(),
     {ok, Ks} = fjall:open_txn_keyspace(TxnDb, <<"ks1">>),
@@ -73,7 +67,6 @@ write_transaction_rollback_test() ->
 
     teardown_txn_db(TxnDb).
 
-%% Test: Read-your-own-writes semantics
 read_your_own_writes_test() ->
     TxnDb = setup_txn_db(),
     {ok, Ks} = fjall:open_txn_keyspace(TxnDb, <<"ks1">>),
@@ -93,7 +86,6 @@ read_your_own_writes_test() ->
 
     teardown_txn_db(TxnDb).
 
-%% Test: Snapshot isolation in read transactions
 read_transaction_isolation_test() ->
     TxnDb = setup_txn_db(),
     {ok, Ks} = fjall:open_txn_keyspace(TxnDb, <<"ks1">>),
@@ -117,7 +109,6 @@ read_transaction_isolation_test() ->
 
     teardown_txn_db(TxnDb).
 
-%% Test: Multi-keyspace transaction atomicity
 multi_keyspace_transaction_test() ->
     TxnDb = setup_txn_db(),
     {ok, Ks1} = fjall:open_txn_keyspace(TxnDb, <<"ks1">>),
@@ -136,7 +127,6 @@ multi_keyspace_transaction_test() ->
 
     teardown_txn_db(TxnDb).
 
-%% Test: Error on operations after commit
 transaction_finalized_error_test() ->
     TxnDb = setup_txn_db(),
     {ok, Ks} = fjall:open_txn_keyspace(TxnDb, <<"ks1">>),
@@ -152,7 +142,6 @@ transaction_finalized_error_test() ->
 
     teardown_txn_db(TxnDb).
 
-%% Test: Transaction remove operation
 transaction_remove_test() ->
     TxnDb = setup_txn_db(),
     {ok, Ks} = fjall:open_txn_keyspace(TxnDb, <<"ks1">>),
@@ -173,7 +162,6 @@ transaction_remove_test() ->
 
     teardown_txn_db(TxnDb).
 
-%% Test: Multiple transactions on same keyspace
 concurrent_transactions_test() ->
     TxnDb = setup_txn_db(),
     {ok, Ks} = fjall:open_txn_keyspace(TxnDb, <<"ks1">>),
@@ -192,5 +180,33 @@ concurrent_transactions_test() ->
     {ok, ReadTx} = fjall:begin_read_txn(TxnDb),
     {ok, <<"value1">>} = fjall:read_txn_get(ReadTx, Ks, <<"key1">>),
     {ok, <<"value2">>} = fjall:read_txn_get(ReadTx, Ks, <<"key2">>),
+
+    teardown_txn_db(TxnDb).
+
+transaction_conflict_test() ->
+    TxnDb = setup_txn_db(),
+    {ok, Ks} = fjall:open_txn_keyspace(TxnDb, <<"ks1">>),
+
+    % Insert initial value
+    {ok, WriteTx0} = fjall:begin_write_txn(TxnDb),
+    ok = fjall:txn_insert(WriteTx0, Ks, <<"key1">>, <<"initial">>),
+    ok = fjall:commit_txn(WriteTx0),
+
+    % Transaction A reads the key
+    {ok, WriteTxA} = fjall:begin_write_txn(TxnDb),
+    {ok, <<"initial">>} = fjall:txn_get(WriteTxA, Ks, <<"key1">>),
+
+    % Transaction B modifies and commits the same key
+    {ok, WriteTxB} = fjall:begin_write_txn(TxnDb),
+    ok = fjall:txn_insert(WriteTxB, Ks, <<"key1">>, <<"from_b">>),
+    ok = fjall:commit_txn(WriteTxB),
+
+    % Transaction A tries to modify and commit - should conflict
+    ok = fjall:txn_insert(WriteTxA, Ks, <<"key1">>, <<"from_a">>),
+    {error, transaction_conflict} = fjall:commit_txn(WriteTxA),
+
+    % Verify B's value persisted
+    {ok, ReadTx} = fjall:begin_read_txn(TxnDb),
+    {ok, <<"from_b">>} = fjall:read_txn_get(ReadTx, Ks, <<"key1">>),
 
     teardown_txn_db(TxnDb).

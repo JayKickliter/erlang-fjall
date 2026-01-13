@@ -1,8 +1,7 @@
 -module(fjall_test).
--moduledoc false.
 -include_lib("eunit/include/eunit.hrl").
 
--define(TEST_DB, "./test_db_eunit").
+-define(TEST_DB, "/tmp/test_db_eunit").
 
 setup() ->
     % Clean up any existing test database
