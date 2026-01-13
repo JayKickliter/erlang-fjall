@@ -6,7 +6,7 @@ version = "0.1.0"
 
 [lib]
 crate-type = ["dylib"]
-name       = "native"
+name       = "fjall_native"
 path       = "native/lib.rs"
 
 [dependencies]

@@ -701,12 +701,12 @@ load() ->
             {error, bad_name} ->
                 case filelib:is_dir(filename:join(["..", priv])) of
                     true ->
-                        filename:join(["..", priv, libnative]);
+                        filename:join(["..", priv, "libfjall-native"]);
                     _ ->
-                        filename:join([priv, libnative])
+                        filename:join([priv, "libfjall-native"])
                 end;
             Dir ->
-                filename:join(Dir, libnative)
+                filename:join(Dir, "libfjall-native")
         end,
     case erlang:load_nif(SoName, 0) of
         ok ->
