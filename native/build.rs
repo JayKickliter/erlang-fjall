@@ -12,9 +12,9 @@ fn main() {
     let profile = env::var("PROFILE").unwrap();
 
     let file_name = match env::var("CARGO_CFG_TARGET_OS").unwrap().as_str() {
-        "windows" => "libnative.dll",
-        "macos" | "ios" => "libnative.dylib",
-        _ => "libnative.so",
+        "windows" => "libfjall_native.dll",
+        "macos" | "ios" => "libfjall_native.dylib",
+        _ => "libfjall_native.so",
     };
 
     let mut so_path: PathBuf = [&repo, "_build", "native"].iter().collect();

@@ -9,12 +9,12 @@ ci:
 	$(REBAR) eunit --cover
 	@echo ">>> Check erlang formatting (erlfmt)"
 	$(REBAR) fmt --check
-	@echo ">>> Check erlang docs (edoc)"
-	$(REBAR) edoc
+	@echo ">>> Check erlang docs (ex_doc)"
+	$(REBAR) ex_doc
 	@echo ">>> Lint rust (clippy)"
 	cargo clippy --release -- -Wclippy::all
 	@echo ">>> Check rust formatting (rustfmt)"
-	cargo fmt --check
+	cargo fmt --check -- --config imports_granularity=crate
 
 clean:
 	$(REBAR) clean
@@ -28,9 +28,11 @@ format:
 
 test:
 	$(REBAR) eunit
+	cargo test
 
 typecheck:
 	$(REBAR) dialyzer
+	cargo clippy --release -- -Wclippy::all
 
 doc:
 	$(REBAR) ex_doc
