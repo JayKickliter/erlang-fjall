@@ -2,6 +2,6 @@ mod config;
 mod database;
 mod error;
 mod keyspace;
-mod transaction;
+mod optimistic_txn;
 
 rustler::init!("fjall");

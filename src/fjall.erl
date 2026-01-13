@@ -173,7 +173,7 @@ Transactional databases support ACID transactions for atomic
 multi-keyspace updates and snapshot-isolated reads.
 Use `open_txn/1` or `open_txn/2` to create a transactional database.
 
-See [SingleWriterTxDatabase](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html)
+See [OptimisticTxDatabase](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html)
 in the Rust documentation.
 """.
 -opaque txn_database() :: reference().
@@ -196,7 +196,7 @@ Provides single-writer serialized transactions with read-your-own-writes
 semantics. Created with `begin_write_txn/1`, must be committed with
 `commit_txn/1` or rolled back with `rollback_txn/1`.
 
-See [SingleWriterWriteTx](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html)
+See [OptimisticWriteTx](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html)
 in the Rust documentation.
 """.
 -opaque write_txn() :: reference().
@@ -447,7 +447,7 @@ atomic multi-keyspace writes and snapshot-isolated reads.
 
 See `open/1` for path handling and error information.
 
-See [SingleWriterTxDatabase::open](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.open)
+See [OptimisticTxDatabase::open](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.open)
 in the Rust documentation.
 """.
 -spec open_txn(Path :: file:name_all()) -> result(txn_database()).
@@ -461,7 +461,7 @@ Accepts the same configuration options as `open/2`. The transactional
 database can be used for both transactional and non-transactional
 keyspace operations.
 
-See [SingleWriterTxDatabase::open](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.open)
+See [OptimisticTxDatabase::open](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.open)
 in the Rust documentation.
 """.
 -spec open_txn(Path :: file:name_all(), Options :: [config_option()]) ->
@@ -481,7 +481,7 @@ Opens or creates a keyspace in a transactional database.
 Returns a keyspace handle for use in transactions. Like
 `open_keyspace/2` but for use with transactional databases.
 
-See [SingleWriterTxDatabase::keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.keyspace)
+See [OptimisticTxDatabase::keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.keyspace)
 in the Rust documentation.
 """.
 -spec open_txn_keyspace(Database :: txn_database(), Name :: binary()) ->
@@ -497,6 +497,13 @@ writes. The transaction must be explicitly committed with `commit_txn/1`
 or rolled back with `rollback_txn/1`. If neither is called, automatic
 rollback occurs when the transaction is garbage collected.
 
+## Optimistic Concurrency Control
+
+Transactions use optimistic concurrency control. Multiple transactions
+can run concurrently, but conflicts are detected at commit time. If a
+key read by this transaction was modified by another committed
+transaction, `commit_txn/1` returns `{error, transaction_conflict}`.
+
 ## Semantics
 
 Write transactions provide:
@@ -504,10 +511,10 @@ Write transactions provide:
 - **Read-your-own-writes (RYOW)**: Reads within the transaction see
   uncommitted writes by the same transaction.
 - **Atomicity**: All writes commit or none do.
-- **Single-writer serialization**: Transactions are serialized per
-  database.
 - **Cross-keyspace atomicity**: Can update multiple keyspaces
   atomically.
+- **Optimistic locking**: Conflicts detected at commit time, not
+  during reads/writes.
 
 ## Example
 
@@ -518,7 +525,7 @@ ok = fjall:txn_insert(Txn, Keyspace2, <<"key2">>, <<"value2">>),
 ok = fjall:commit_txn(Txn)  % Both inserts are now atomic
 ```
 
-See [SingleWriterTxDatabase::write_tx](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.write_tx)
+See [OptimisticTxDatabase::write_tx](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.write_tx)
 in the Rust documentation.
 """.
 -spec begin_write_txn(Database :: txn_database()) -> result(write_txn()).
@@ -554,7 +561,7 @@ Read transactions provide:
 % ReadTxn still sees its original snapshot
 ```
 
-See [SingleWriterTxDatabase::read_tx](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterTxDatabase.html#method.read_tx)
+See [OptimisticTxDatabase::read_tx](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.read_tx)
 in the Rust documentation.
 """.
 -spec begin_read_txn(Database :: txn_database()) -> result(read_txn()).
@@ -571,7 +578,7 @@ Returns `ok` on success or `{error, Reason}` on failure. The
 transaction is not automatically rolled back on error; the caller
 must decide whether to commit or rollback.
 
-See [SingleWriterWriteTx::insert](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.insert)
+See [OptimisticWriteTx::insert](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html#method.insert)
 in the Rust documentation.
 """.
 -spec txn_insert(
@@ -596,7 +603,7 @@ If the key was inserted or updated earlier in the same transaction,
 this returns that value. Otherwise, it returns the value from the
 database at transaction start time.
 
-See [SingleWriterWriteTx::get](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.get)
+See [OptimisticWriteTx::get](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html#method.get)
 in the Rust documentation.
 """.
 -spec txn_get(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
@@ -610,7 +617,7 @@ Removes a key from a write transaction.
 If the key doesn't exist, this is a no-op and returns `ok`. The
 removal is visible to subsequent reads in the same transaction.
 
-See [SingleWriterWriteTx::remove](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.remove)
+See [OptimisticWriteTx::remove](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html#method.remove)
 in the Rust documentation.
 """.
 -spec txn_remove(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
@@ -644,12 +651,21 @@ After commit, the transaction handle is invalid and cannot be used
 for further operations (will return
 `{error, transaction_already_finalized}`).
 
+## Errors
+
+- `{error, transaction_conflict}` - A concurrent transaction modified
+  a key that was read by this transaction. The transaction is rolled
+  back; retry the operation if appropriate.
+- `{error, transaction_already_finalized}` - The transaction was
+  already committed or rolled back.
+- `{error, Reason}` - I/O error when writing to disk.
+
 ## Atomicity Guarantee
 
 Either all writes in the transaction are applied, or none are. There
 is no middle ground.
 
-See [SingleWriterWriteTx::commit](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.commit)
+See [OptimisticWriteTx::commit](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html#method.commit)
 in the Rust documentation.
 """.
 -spec commit_txn(Txn :: write_txn()) -> result().
@@ -667,7 +683,7 @@ for further operations.
 Rollback is optional. If a transaction is dropped without being
 committed or explicitly rolled back, automatic rollback occurs.
 
-See [SingleWriterWriteTx::rollback](https://docs.rs/fjall/3.0.1/fjall/struct.SingleWriterWriteTx.html#method.rollback)
+See [OptimisticWriteTx::rollback](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html#method.rollback)
 in the Rust documentation.
 """.
 -spec rollback_txn(Txn :: write_txn()) -> result().
