@@ -16,32 +16,32 @@ pub mod atom {
 ////////////////////////////////////////////////////////////////////////////
 
 /// Transactional database resource (OptimisticTxDatabase)
-pub struct TxDatabaseRsc(fjall::OptimisticTxDatabase);
+pub struct OptimisticTxDatabaseRsc(fjall::OptimisticTxDatabase);
 
-impl std::panic::RefUnwindSafe for TxDatabaseRsc {}
+impl std::panic::RefUnwindSafe for OptimisticTxDatabaseRsc {}
 
 #[rustler::resource_impl]
-impl Resource for TxDatabaseRsc {}
+impl Resource for OptimisticTxDatabaseRsc {}
 
 /// Transactional keyspace resource
-pub struct TxKeyspaceRsc(fjall::OptimisticTxKeyspace);
+pub struct OptimisticTxKeyspaceRsc(fjall::OptimisticTxKeyspace);
 
-impl std::panic::RefUnwindSafe for TxKeyspaceRsc {}
+impl std::panic::RefUnwindSafe for OptimisticTxKeyspaceRsc {}
 
 #[rustler::resource_impl]
-impl Resource for TxKeyspaceRsc {}
+impl Resource for OptimisticTxKeyspaceRsc {}
 
 /// Write transaction resource
 ///
 /// OptimisticTxDatabase::WriteTransaction has no lifetime constraints,
 /// so we can store it directly without any unsafe code.
-pub struct WriteTxnRsc(Mutex<Option<fjall::OptimisticWriteTx>>);
+pub struct OptimisticWriteTxRsc(Mutex<Option<fjall::OptimisticWriteTx>>);
 
-impl WriteTxnRsc {
+impl OptimisticWriteTxRsc {
     /// Create a new write transaction
-    fn new(db_ref: ResourceArc<TxDatabaseRsc>) -> Result<Self, FjallError> {
+    fn new(db_ref: ResourceArc<OptimisticTxDatabaseRsc>) -> Result<Self, FjallError> {
         let txn = db_ref.0.write_tx().to_erlang_result()?;
-        Ok(WriteTxnRsc(Mutex::new(Some(txn))))
+        Ok(OptimisticWriteTxRsc(Mutex::new(Some(txn))))
     }
 
     /// Borrow transaction mutably for read/write operations
@@ -69,12 +69,12 @@ impl WriteTxnRsc {
     }
 }
 
-impl std::panic::RefUnwindSafe for WriteTxnRsc {}
+impl std::panic::RefUnwindSafe for OptimisticWriteTxRsc {}
 
 #[rustler::resource_impl]
-impl Resource for WriteTxnRsc {}
+impl Resource for OptimisticWriteTxRsc {}
 
-impl Drop for WriteTxnRsc {
+impl Drop for OptimisticWriteTxRsc {
     fn drop(&mut self) {
         // Automatically rollback if transaction wasn't explicitly
         // committed/rolled back. We ignore any errors during drop.
@@ -86,14 +86,14 @@ impl Drop for WriteTxnRsc {
 ///
 /// In fjall 3.0, read transactions are called Snapshot and provide
 /// consistent point-in-time views of the data.
-pub struct ReadTxnRsc {
+pub struct SnapshotRsc {
     pub snapshot: fjall::Snapshot,
 }
 
-impl std::panic::RefUnwindSafe for ReadTxnRsc {}
+impl std::panic::RefUnwindSafe for SnapshotRsc {}
 
 #[rustler::resource_impl]
-impl Resource for ReadTxnRsc {}
+impl Resource for SnapshotRsc {}
 
 ////////////////////////////////////////////////////////////////////////////
 // Database & Keyspace NIFs                                               //
@@ -103,26 +103,26 @@ impl Resource for ReadTxnRsc {}
 pub fn open_txn_nif(
     path: rustler::Binary,
     options: Vec<(rustler::Atom, rustler::Term)>,
-) -> FjallResult<ResourceArc<TxDatabaseRsc>> {
+) -> FjallResult<ResourceArc<OptimisticTxDatabaseRsc>> {
     let result = (|| {
         let path_str = decode_path(path)?;
         let builder = parse_builder_options_optimistic_tx(&path_str, options)?;
         let db = builder.open().to_erlang_result()?;
-        Ok(ResourceArc::new(TxDatabaseRsc(db)))
+        Ok(ResourceArc::new(OptimisticTxDatabaseRsc(db)))
     })();
     FjallResult(result)
 }
 
 #[rustler::nif]
 pub fn open_txn_keyspace(
-    db: ResourceArc<TxDatabaseRsc>,
+    db: ResourceArc<OptimisticTxDatabaseRsc>,
     name: String,
-) -> FjallResult<ResourceArc<TxKeyspaceRsc>> {
+) -> FjallResult<ResourceArc<OptimisticTxKeyspaceRsc>> {
     let result = (|| {
         let keyspace =
             db.0.keyspace(&name, fjall::KeyspaceCreateOptions::default)
                 .to_erlang_result()?;
-        Ok(ResourceArc::new(TxKeyspaceRsc(keyspace)))
+        Ok(ResourceArc::new(OptimisticTxKeyspaceRsc(keyspace)))
     })();
     FjallResult(result)
 }
@@ -132,15 +132,17 @@ pub fn open_txn_keyspace(
 ////////////////////////////////////////////////////////////////////////////
 
 #[rustler::nif]
-pub fn begin_write_txn(db: ResourceArc<TxDatabaseRsc>) -> FjallResult<ResourceArc<WriteTxnRsc>> {
-    let result = WriteTxnRsc::new(db).map(ResourceArc::new);
+pub fn begin_write_txn(
+    db: ResourceArc<OptimisticTxDatabaseRsc>,
+) -> FjallResult<ResourceArc<OptimisticWriteTxRsc>> {
+    let result = OptimisticWriteTxRsc::new(db).map(ResourceArc::new);
     FjallResult(result)
 }
 
 #[rustler::nif]
 pub fn txn_insert(
-    txn: ResourceArc<WriteTxnRsc>,
-    keyspace: ResourceArc<TxKeyspaceRsc>,
+    txn: ResourceArc<OptimisticWriteTxRsc>,
+    keyspace: ResourceArc<OptimisticTxKeyspaceRsc>,
     key: rustler::Binary,
     value: rustler::Binary,
 ) -> FjallOkResult {
@@ -153,8 +155,8 @@ pub fn txn_insert(
 
 #[rustler::nif]
 pub fn txn_get(
-    txn: ResourceArc<WriteTxnRsc>,
-    keyspace: ResourceArc<TxKeyspaceRsc>,
+    txn: ResourceArc<OptimisticWriteTxRsc>,
+    keyspace: ResourceArc<OptimisticTxKeyspaceRsc>,
     key: rustler::Binary,
 ) -> FjallBinaryResult {
     let result = txn.with_txn_mut(|t| {
@@ -170,8 +172,8 @@ pub fn txn_get(
 
 #[rustler::nif]
 pub fn txn_remove(
-    txn: ResourceArc<WriteTxnRsc>,
-    keyspace: ResourceArc<TxKeyspaceRsc>,
+    txn: ResourceArc<OptimisticWriteTxRsc>,
+    keyspace: ResourceArc<OptimisticTxKeyspaceRsc>,
     key: rustler::Binary,
 ) -> FjallOkResult {
     let result = txn.with_txn_mut(|t| {
@@ -182,17 +184,19 @@ pub fn txn_remove(
 }
 
 #[rustler::nif]
-pub fn commit_txn(txn: ResourceArc<WriteTxnRsc>) -> FjallOkResult {
+pub fn commit_txn(txn: ResourceArc<OptimisticWriteTxRsc>) -> FjallOkResult {
     let result = (|| {
         let transaction = txn.take_txn()?;
-        let _ = transaction.commit().to_erlang_result()?;
+        // commit() returns Result<Result<(), Conflict>, Error>
+        // Outer error is IO error, inner error is conflict
+        transaction.commit()??;
         Ok(())
     })();
     FjallOkResult(result)
 }
 
 #[rustler::nif]
-pub fn rollback_txn(txn: ResourceArc<WriteTxnRsc>) -> FjallOkResult {
+pub fn rollback_txn(txn: ResourceArc<OptimisticWriteTxRsc>) -> FjallOkResult {
     let result = (|| {
         let _transaction = txn.take_txn()?;
         // Rollback happens automatically when transaction is dropped
@@ -206,16 +210,18 @@ pub fn rollback_txn(txn: ResourceArc<WriteTxnRsc>) -> FjallOkResult {
 ////////////////////////////////////////////////////////////////////////////
 
 #[rustler::nif]
-pub fn begin_read_txn(db: ResourceArc<TxDatabaseRsc>) -> FjallResult<ResourceArc<ReadTxnRsc>> {
+pub fn begin_read_txn(
+    db: ResourceArc<OptimisticTxDatabaseRsc>,
+) -> FjallResult<ResourceArc<SnapshotRsc>> {
     let snapshot = db.0.read_tx();
-    let read_txn = ReadTxnRsc { snapshot };
+    let read_txn = SnapshotRsc { snapshot };
     FjallResult(Ok(ResourceArc::new(read_txn)))
 }
 
 #[rustler::nif]
 pub fn read_txn_get(
-    snapshot_rsc: ResourceArc<ReadTxnRsc>,
-    keyspace: ResourceArc<TxKeyspaceRsc>,
+    snapshot_rsc: ResourceArc<SnapshotRsc>,
+    keyspace: ResourceArc<OptimisticTxKeyspaceRsc>,
     key: rustler::Binary,
 ) -> FjallBinaryResult {
     let result = (|| {

@@ -2,9 +2,9 @@ use rustler::{Encoder, Env, Term};
 
 pub mod atom {
     rustler::atoms! {
-        ok,
         error,
         not_found,
+        ok,
         transaction_already_finalized,
         transaction_conflict,
     }
@@ -16,19 +16,24 @@ pub mod atom {
 
 #[derive(Debug)]
 pub enum FjallError {
-    Fjall(fjall::Error),
     Config(String),
-    NotFound,
-    Utf8(std::str::Utf8Error),
     Decode(String),
+    Fjall(fjall::Error),
+    NotFound,
     TransactionAlreadyFinalized,
-    #[allow(dead_code)]
     TransactionConflict,
+    Utf8(std::str::Utf8Error),
 }
 
 impl From<fjall::Error> for FjallError {
     fn from(err: fjall::Error) -> Self {
         FjallError::Fjall(err)
+    }
+}
+
+impl From<fjall::Conflict> for FjallError {
+    fn from(_err: fjall::Conflict) -> Self {
+        FjallError::TransactionConflict
     }
 }
 
@@ -49,22 +54,22 @@ impl std::panic::RefUnwindSafe for FjallError {}
 impl Encoder for FjallError {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         match self {
+            FjallError::Config(msg) => (atom::error(), msg.clone()).encode(env),
+            FjallError::Decode(msg) => (atom::error(), msg.clone()).encode(env),
             FjallError::Fjall(e) => {
                 let msg = format!("{:?}", e);
                 (atom::error(), msg).encode(env)
             }
-            FjallError::Config(msg) => (atom::error(), msg.clone()).encode(env),
             FjallError::NotFound => (atom::error(), atom::not_found()).encode(env),
-            FjallError::Utf8(e) => {
-                let msg = format!("UTF-8 error: {}", e);
-                (atom::error(), msg).encode(env)
-            }
-            FjallError::Decode(msg) => (atom::error(), msg.clone()).encode(env),
             FjallError::TransactionAlreadyFinalized => {
                 (atom::error(), atom::transaction_already_finalized()).encode(env)
             }
             FjallError::TransactionConflict => {
                 (atom::error(), atom::transaction_conflict()).encode(env)
+            }
+            FjallError::Utf8(e) => {
+                let msg = format!("UTF-8 error: {}", e);
+                (atom::error(), msg).encode(env)
             }
         }
     }
