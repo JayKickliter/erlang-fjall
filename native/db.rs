@@ -61,11 +61,9 @@ pub fn db_keyspace(
 
 #[rustler::nif]
 pub fn db_batch(db: ResourceArc<DbRsc>) -> FjallResult<ResourceArc<WbRsc>> {
-    let result = (|| {
-        let batch = db.0.batch();
-        Ok(ResourceArc::new(WbRsc(Mutex::new(Some(batch)))))
-    })();
-    FjallResult(result)
+    let batch = db.0.batch();
+    let res = Ok(ResourceArc::new(WbRsc(Mutex::new(Some(batch)))));
+    FjallResult(res)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
