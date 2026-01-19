@@ -108,6 +108,8 @@ Returns `{ok, Keyspace}` on success or `{error, Reason}` on failure.
 
 See [Database::keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.keyspace)
 in the Rust documentation.
+
+See `m:fjall_ks` for keyspace operations.
 """.
 -spec keyspace(Database :: db(), Name :: binary()) ->
     fjall:result(fjall_ks:ks()).
@@ -144,6 +146,8 @@ ok = fjall_wb:commit(Batch)
 
 See [Database::batch](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.batch)
 in the Rust documentation.
+
+See `m:fjall_wb` for write batch operations.
 """.
 -spec batch(Database :: db()) -> fjall:result(fjall_wb:wb()).
 batch(Database) ->

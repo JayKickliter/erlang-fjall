@@ -3,9 +3,6 @@
 -moduledoc """
 Optimistic transactional database operations.
 
-This module provides operations for managing a transactional Fjall database
-with support for ACID transactions using optimistic concurrency control.
-
 See [OptimisticTxDatabase](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html)
 in the Rust documentation.
 """.
@@ -101,6 +98,8 @@ Returns `{ok, Keyspace}` on success or `{error, Reason}` on failure.
 
 See [OptimisticTxDatabase::keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.keyspace)
 in the Rust documentation.
+
+See `m:fjall_otx_tx` and `m:fjall_snapshot` for keyspace operations.
 """.
 -spec keyspace(Database :: otx_db(), Name :: binary()) ->
     fjall:result(fjall_otx_ks:otx_ks()).
@@ -137,6 +136,8 @@ ok = fjall_otx_tx:commit(Txn)
 
 See [OptimisticTxDatabase::write_tx](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.write_tx)
 in the Rust documentation.
+
+See `m:fjall_otx_tx` for transaction operations.
 """.
 -spec write_tx(Database :: otx_db()) -> fjall:result(fjall_otx_tx:write_tx()).
 write_tx(Database) ->
@@ -160,6 +161,8 @@ Returns `{ok, Snapshot}` on success or `{error, Reason}` on failure.
 
 See [OptimisticTxDatabase::read_tx](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.read_tx)
 in the Rust documentation.
+
+See `m:fjall_snapshot` for snapshot operations.
 """.
 -spec snapshot(Database :: otx_db()) -> fjall:result(fjall_snapshot:snapshot()).
 snapshot(Database) ->
