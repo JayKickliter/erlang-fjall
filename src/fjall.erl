@@ -176,52 +176,96 @@ Result type for operations that return a value on success.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % fjall_db NIFs
+-spec db_open_nif(Path :: binary(), Options :: list()) -> result(fjall_db:db()).
 db_open_nif(_Path, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec db_keyspace(Db :: fjall_db:db(), Name :: binary(), Options :: list()) ->
+    result(fjall_ks:ks()).
 db_keyspace(_Db, _Name, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec db_batch(Db :: fjall_db:db()) -> result(fjall_wb:wb()).
 db_batch(_Db) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec db_persist(Db :: fjall_db:db(), Mode :: persist_mode()) -> result().
 db_persist(_Db, _Mode) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_ks NIFs
+-spec ks_get(Ks :: fjall_ks:ks(), Key :: binary()) -> result(binary()).
 ks_get(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_insert(Ks :: fjall_ks:ks(), Key :: binary(), Value :: binary()) -> result().
 ks_insert(_Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_remove(Ks :: fjall_ks:ks(), Key :: binary()) -> result().
 ks_remove(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_disk_space(Ks :: fjall_ks:ks()) -> non_neg_integer().
 ks_disk_space(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_wb NIFs
+-spec wb_insert(Batch :: fjall_wb:wb(), Ks :: fjall_ks:ks(), Key :: binary(), Value :: binary()) ->
+    result().
 wb_insert(_Batch, _Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec wb_remove(Batch :: fjall_wb:wb(), Ks :: fjall_ks:ks(), Key :: binary()) -> result().
 wb_remove(_Batch, _Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec wb_commit(Batch :: fjall_wb:wb()) -> result().
 wb_commit(_Batch) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec wb_commit_with_mode(Batch :: fjall_wb:wb(), Mode :: persist_mode()) -> result().
 wb_commit_with_mode(_Batch, _Mode) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec wb_len(Batch :: fjall_wb:wb()) -> non_neg_integer().
 wb_len(_Batch) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec wb_is_empty(Batch :: fjall_wb:wb()) -> boolean().
 wb_is_empty(_Batch) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_otx_db NIFs
+-spec otx_db_open_nif(Path :: binary(), Options :: list()) -> result(fjall_otx_db:otx_db()).
 otx_db_open_nif(_Path, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_db_keyspace(Db :: fjall_otx_db:otx_db(), Name :: binary(), Options :: list()) ->
+    result(fjall_otx_ks:otx_ks()).
 otx_db_keyspace(_Db, _Name, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_db_write_tx(Db :: fjall_otx_db:otx_db()) -> result(fjall_otx_tx:write_tx()).
 otx_db_write_tx(_Db) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_db_snapshot(Db :: fjall_otx_db:otx_db()) -> result(fjall_snapshot:snapshot()).
 otx_db_snapshot(_Db) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_db_persist(Db :: fjall_otx_db:otx_db(), Mode :: persist_mode()) -> result().
 otx_db_persist(_Db, _Mode) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_otx_tx NIFs
+-spec otx_tx_insert(
+    Tx :: fjall_otx_tx:write_tx(), Ks :: fjall_otx_ks:otx_ks(), Key :: binary(), Value :: binary()
+) -> result().
 otx_tx_insert(_Tx, _Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_tx_get(Tx :: fjall_otx_tx:write_tx(), Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) ->
+    result(binary()).
 otx_tx_get(_Tx, _Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_tx_remove(Tx :: fjall_otx_tx:write_tx(), Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) ->
+    result().
 otx_tx_remove(_Tx, _Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_tx_commit(Tx :: fjall_otx_tx:write_tx()) -> result().
 otx_tx_commit(_Tx) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_tx_rollback(Tx :: fjall_otx_tx:write_tx()) -> result().
 otx_tx_rollback(_Tx) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_snapshot NIFs
+-spec snapshot_get(
+    Snapshot :: fjall_snapshot:snapshot(), Ks :: fjall_otx_ks:otx_ks(), Key :: binary()
+) -> result(binary()).
 snapshot_get(_Snapshot, _Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_otx_ks NIFs
+-spec otx_ks_insert(Ks :: fjall_otx_ks:otx_ks(), Key :: binary(), Value :: binary()) -> result().
 otx_ks_insert(_Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_ks_get(Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) -> result(binary()).
 otx_ks_get(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_ks_remove(Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) -> result().
 otx_ks_remove(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_ks_take(Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) -> result(binary()).
 otx_ks_take(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_ks_contains_key(Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) -> result(boolean()).
 otx_ks_contains_key(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_ks_size_of(Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) -> result(non_neg_integer()).
 otx_ks_size_of(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_ks_approximate_len(Ks :: fjall_otx_ks:otx_ks()) -> non_neg_integer().
 otx_ks_approximate_len(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_ks_first_key_value(Ks :: fjall_otx_ks:otx_ks()) -> result({binary(), binary()}).
 otx_ks_first_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_ks_last_key_value(Ks :: fjall_otx_ks:otx_ks()) -> result({binary(), binary()}).
 otx_ks_last_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_ks_path(Ks :: fjall_otx_ks:otx_ks()) -> binary().
 otx_ks_path(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
