@@ -26,12 +26,10 @@ with `fjall_otx_db:snapshot/1`. Read-only, no explicit commit/rollback needed.
 -doc """
 Retrieves a value from a read snapshot.
 
-Returns the value if it exists in the snapshot, or `{error, not_found}`
-if it doesn't. All reads in the same read snapshot see the same
-point-in-time view, regardless of concurrent writes.
-
-Returns `{ok, Value}` if the key exists, or `{error, not_found}` if
-the key does not exist. Returns `{error, Reason}` on other errors.
+Returns the value if it exists in the snapshot, `not_found` if it
+doesn't, or `{error, Reason}` on other errors. All reads in the same
+read snapshot see the same point-in-time view, regardless of concurrent
+writes.
 
 ## Example
 
@@ -47,6 +45,10 @@ in the Rust documentation.
     Snapshot :: snapshot(),
     Keyspace :: fjall_otx_ks:otx_ks(),
     Key :: binary()
-) -> fjall:result(binary()).
+) -> {ok, binary()} | not_found | {error, term()}.
 get(Snapshot, Keyspace, Key) ->
-    fjall:snapshot_get(Snapshot, Keyspace, Key).
+    case fjall:snapshot_get(Snapshot, Keyspace, Key) of
+        {ok, Value} -> {ok, Value};
+        {error, not_found} -> not_found;
+        {error, Reason} -> {error, Reason}
+    end.

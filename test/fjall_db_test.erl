@@ -14,11 +14,11 @@ basic_operations_test() ->
     {ok, <<"value1">>} = fjall_ks:get(Ks, <<"key1">>),
 
     % Not found
-    {error, not_found} = fjall_ks:get(Ks, <<"nonexistent">>),
+    not_found = fjall_ks:get(Ks, <<"nonexistent">>),
 
     % Remove
     ok = fjall_ks:remove(Ks, <<"key1">>),
-    {error, not_found} = fjall_ks:get(Ks, <<"key1">>),
+    not_found = fjall_ks:get(Ks, <<"key1">>),
 
     ok.
 

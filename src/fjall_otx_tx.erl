@@ -63,7 +63,8 @@ insert(Txn, Keyspace, Key, Value) ->
 Retrieves a value from a write transaction.
 
 Returns the value if it exists (including writes made earlier in the
-same transaction). Returns `{error, not_found}` if the key doesn't exist.
+same transaction), `not_found` if the key doesn't exist, or
+`{error, Reason}` on other errors.
 
 ## Read-Your-Own-Writes
 
@@ -83,9 +84,13 @@ See [OptimisticWriteTx::get](https://docs.rs/fjall/3.0.1/fjall/struct.Optimistic
 in the Rust documentation.
 """.
 -spec get(Txn :: write_tx(), Keyspace :: fjall_otx_ks:otx_ks(), Key :: binary()) ->
-    fjall:result(binary()).
+    {ok, binary()} | not_found | {error, term()}.
 get(Txn, Keyspace, Key) ->
-    fjall:otx_tx_get(Txn, Keyspace, Key).
+    case fjall:otx_tx_get(Txn, Keyspace, Key) of
+        {ok, Value} -> {ok, Value};
+        {error, not_found} -> not_found;
+        {error, Reason} -> {error, Reason}
+    end.
 
 -doc """
 Removes a key from a write transaction.

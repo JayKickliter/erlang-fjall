@@ -62,11 +62,8 @@ insert(Keyspace, Key, Value) ->
 Retrieves the value associated with a key from the keyspace.
 
 This is a convenience method that auto-wraps the operation in a transaction.
-Returns `{ok, Value}` if the key exists, or `{error, not_found}` if not.
-
-## Errors
-
-- `{error, not_found}` - Key does not exist in the keyspace
+Returns `{ok, Value}` if the key exists, `not_found` if the key does not
+exist, or `{error, Reason}` on other errors.
 
 ## Example
 
@@ -74,7 +71,7 @@ Returns `{ok, Value}` if the key exists, or `{error, not_found}` if not.
 case fjall_otx_ks:get(Keyspace, <<"alice">>) of
     {ok, Email} ->
         io:format("Alice's email: ~s~n", [Email]);
-    {error, not_found} ->
+    not_found ->
         io:format("Alice not found~n")
 end
 ```
@@ -82,9 +79,14 @@ end
 See [OptimisticTxKeyspace::get](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxKeyspace.html#method.get)
 in the Rust documentation.
 """.
--spec get(Keyspace :: otx_ks(), Key :: binary()) -> fjall:result(binary()).
+-spec get(Keyspace :: otx_ks(), Key :: binary()) ->
+    {ok, binary()} | not_found | {error, term()}.
 get(Keyspace, Key) ->
-    fjall:otx_ks_get(Keyspace, Key).
+    case fjall:otx_ks_get(Keyspace, Key) of
+        {ok, Value} -> {ok, Value};
+        {error, not_found} -> not_found;
+        {error, Reason} -> {error, Reason}
+    end.
 
 -doc """
 Removes a key-value pair from the keyspace.

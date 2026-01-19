@@ -31,12 +31,8 @@ Keyspaces are logical separations of data within a database. Use
 -doc """
 Retrieves the value associated with a key from the keyspace.
 
-Returns `{ok, Value}` if the key exists, or `{error, not_found}` if
-the key does not exist. Returns `{error, Reason}` on other errors.
-
-## Errors
-
-- `{error, not_found}` - Key does not exist in the keyspace
+Returns `{ok, Value}` if the key exists, `not_found` if the key does
+not exist, or `{error, Reason}` on other errors.
 
 ## Example
 
@@ -44,7 +40,7 @@ the key does not exist. Returns `{error, Reason}` on other errors.
 case fjall_ks:get(Keyspace, <<"alice">>) of
     {ok, Email} ->
         io:format("Alice's email: ~s~n", [Email]);
-    {error, not_found} ->
+    not_found ->
         io:format("Alice not found~n");
     {error, Reason} ->
         io:format("Error: ~p~n", [Reason])
@@ -54,9 +50,14 @@ end
 See [Keyspace::get](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.get)
 in the Rust documentation.
 """.
--spec get(Keyspace :: ks(), Key :: binary()) -> fjall:result(binary()).
+-spec get(Keyspace :: ks(), Key :: binary()) ->
+    {ok, binary()} | not_found | {error, term()}.
 get(Keyspace, Key) ->
-    fjall:ks_get(Keyspace, Key).
+    case fjall:ks_get(Keyspace, Key) of
+        {ok, Value} -> {ok, Value};
+        {error, not_found} -> not_found;
+        {error, Reason} -> {error, Reason}
+    end.
 
 -doc """
 Inserts or updates a key-value pair in the keyspace.

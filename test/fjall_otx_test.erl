@@ -39,7 +39,7 @@ transaction_rollback_test() ->
 
     % Verify data was not committed
     {ok, Snapshot} = fjall_otx_db:snapshot(Db),
-    {error, not_found} = fjall_snapshot:get(Snapshot, Ks, <<"key1">>),
+    not_found = fjall_snapshot:get(Snapshot, Ks, <<"key1">>),
 
     ok.
 
