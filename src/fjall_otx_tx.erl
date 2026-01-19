@@ -128,7 +128,6 @@ for further operations.
   back; retry the operation if appropriate.
 - `{error, transaction_already_finalized}` - The transaction was
   already committed or rolled back.
-- `{error, Reason}` - I/O error when writing to disk.
 
 ## Example
 

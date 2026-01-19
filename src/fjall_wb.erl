@@ -93,7 +93,6 @@ Returns `ok` on success or `{error, Reason}` on failure.
 ## Errors
 
 - `{error, batch_already_committed}` - The batch was already committed
-- `{error, disk_error}` - I/O error when writing to disk
 
 ## Example
 

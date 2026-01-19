@@ -37,7 +37,6 @@ the key does not exist. Returns `{error, Reason}` on other errors.
 ## Errors
 
 - `{error, not_found}` - Key does not exist in the keyspace
-- `{error, disk_error}` - I/O error when reading from disk
 
 ## Example
 
@@ -67,11 +66,6 @@ values must be binaries.
 
 Returns `ok` on success or `{error, Reason}` on failure.
 
-## Errors
-
-- `{error, disk_error}` - I/O error when writing to disk
-- `{error, out_of_memory}` - Insufficient memory to buffer the write
-
 ## Example
 
 ```erlang
@@ -92,10 +86,6 @@ Removes a key-value pair from the keyspace.
 If the key does not exist, this is a no-op and still returns `ok`.
 
 Returns `ok` on success or `{error, Reason}` on failure.
-
-## Errors
-
-- `{error, disk_error}` - I/O error when writing to disk
 
 ## Example
 
