@@ -12,7 +12,7 @@ the Fjall database modules.
 - `fjall_ks` - Plain non-transactional keyspace operations
 - `fjall_wb` - Write batch operations
 - `fjall_otx_db` - Optimistic transactional database operations
-- `fjall_otx_ks` - Optimistic transactional keyspace (type-only)
+- `fjall_otx_ks` - Optimistic transactional keyspace operations
 - `fjall_otx_tx` - Write transaction operations
 - `fjall_snapshot` - Read snapshot operations
 
@@ -72,7 +72,18 @@ ok = fjall_otx_tx:commit(Txn).
     otx_tx_commit/1,
     otx_tx_rollback/1,
     % fjall_snapshot NIFs
-    snapshot_get/3
+    snapshot_get/3,
+    % fjall_otx_ks NIFs
+    otx_ks_insert/3,
+    otx_ks_get/2,
+    otx_ks_remove/2,
+    otx_ks_take/2,
+    otx_ks_contains_key/2,
+    otx_ks_size_of/2,
+    otx_ks_approximate_len/1,
+    otx_ks_first_key_value/1,
+    otx_ks_last_key_value/1,
+    otx_ks_path/1
 ]).
 
 -export_type([
@@ -200,6 +211,18 @@ otx_tx_rollback(_Tx) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_snapshot NIFs
 snapshot_get(_Snapshot, _Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+% fjall_otx_ks NIFs
+otx_ks_insert(_Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_get(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_remove(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_take(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_contains_key(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_size_of(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_approximate_len(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_first_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_last_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_path(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% NIF loader                                                             %%
