@@ -2,6 +2,7 @@ use rustler::{Encoder, Env, Term};
 
 pub mod atom {
     rustler::atoms! {
+        batch_already_committed,
         error,
         not_found,
         ok,
@@ -16,6 +17,7 @@ pub mod atom {
 
 #[derive(Debug)]
 pub enum FjallError {
+    BatchAlreadyCommitted,
     Config(String),
     Decode(String),
     Fjall(fjall::Error),
@@ -54,6 +56,9 @@ impl std::panic::RefUnwindSafe for FjallError {}
 impl Encoder for FjallError {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         match self {
+            FjallError::BatchAlreadyCommitted => {
+                (atom::error(), atom::batch_already_committed()).encode(env)
+            }
             FjallError::Config(msg) => (atom::error(), msg.clone()).encode(env),
             FjallError::Decode(msg) => (atom::error(), msg.clone()).encode(env),
             FjallError::Fjall(e) => {

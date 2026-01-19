@@ -30,7 +30,7 @@ pub fn decode_path(bin: rustler::Binary) -> Result<String, FjallError> {
 // Configuration Parsing                                                  //
 ////////////////////////////////////////////////////////////////////////////
 
-pub fn parse_builder_options_database(
+pub fn parse_db_options(
     path: &str,
     options: Vec<(rustler::Atom, rustler::Term)>,
 ) -> Result<DatabaseBuilder<fjall::Database>, FjallError> {
@@ -79,7 +79,7 @@ pub fn parse_builder_options_database(
     Ok(builder)
 }
 
-pub fn parse_builder_options_optimistic_tx(
+pub fn parse_otx_db_options(
     path: &str,
     options: Vec<(rustler::Atom, rustler::Term)>,
 ) -> Result<DatabaseBuilder<fjall::OptimisticTxDatabase>, FjallError> {

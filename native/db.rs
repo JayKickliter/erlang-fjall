@@ -1,8 +1,11 @@
 use crate::{
     config::decode_path,
     error::{FjallError, FjallOkResult, FjallRes, FjallResult},
+    ks::KsRsc,
+    wb::WbRsc,
 };
 use rustler::{Resource, ResourceArc};
+use std::sync::Mutex;
 
 pub mod atom {
     rustler::atoms! {
@@ -16,33 +19,58 @@ pub mod atom {
 // Database Resource                                                      //
 ////////////////////////////////////////////////////////////////////////////
 
-pub struct DatabaseRsc(pub fjall::Database);
+pub struct DbRsc(pub fjall::Database);
 
-impl std::panic::RefUnwindSafe for DatabaseRsc {}
+impl std::panic::RefUnwindSafe for DbRsc {}
 
 #[rustler::resource_impl]
-impl Resource for DatabaseRsc {}
+impl Resource for DbRsc {}
 
 ////////////////////////////////////////////////////////////////////////////
 // NIFs                                                                   //
 ////////////////////////////////////////////////////////////////////////////
 
 #[rustler::nif]
-pub fn open_nif(
+pub fn db_open_nif(
     path: rustler::Binary,
     options: Vec<(rustler::Atom, rustler::Term)>,
-) -> FjallResult<ResourceArc<DatabaseRsc>> {
+) -> FjallResult<ResourceArc<DbRsc>> {
     let result = (|| {
         let path_str = decode_path(path)?;
-        let builder = crate::config::parse_builder_options_database(&path_str, options)?;
+        let builder = crate::config::parse_db_options(&path_str, options)?;
         let db = builder.open().to_erlang_result()?;
-        Ok(ResourceArc::new(DatabaseRsc(db)))
+        Ok(ResourceArc::new(DbRsc(db)))
     })();
     FjallResult(result)
 }
 
 #[rustler::nif]
-pub fn persist(db: ResourceArc<DatabaseRsc>, mode: rustler::Atom) -> FjallOkResult {
+pub fn db_keyspace(
+    db: ResourceArc<DbRsc>,
+    name: String,
+    _options: Vec<(rustler::Atom, rustler::Term)>,
+) -> FjallResult<ResourceArc<KsRsc>> {
+    let result = (|| {
+        let ks = db
+            .0
+            .keyspace(&name, fjall::KeyspaceCreateOptions::default)
+            .to_erlang_result()?;
+        Ok(ResourceArc::new(KsRsc(ks)))
+    })();
+    FjallResult(result)
+}
+
+#[rustler::nif]
+pub fn db_batch(db: ResourceArc<DbRsc>) -> FjallResult<ResourceArc<WbRsc>> {
+    let result = (|| {
+        let batch = db.0.batch();
+        Ok(ResourceArc::new(WbRsc(Mutex::new(Some(batch)))))
+    })();
+    FjallResult(result)
+}
+
+#[rustler::nif]
+pub fn db_persist(db: ResourceArc<DbRsc>, mode: rustler::Atom) -> FjallOkResult {
     let result = (|| {
         let persist_mode = if mode == atom::buffer() {
             fjall::PersistMode::Buffer
