@@ -12,8 +12,6 @@ use std::sync::Mutex;
 
 pub struct WriteTxRsc(pub Mutex<Option<fjall::OptimisticWriteTx>>);
 
-impl std::panic::RefUnwindSafe for WriteTxRsc {}
-
 #[rustler::resource_impl]
 impl Resource for WriteTxRsc {}
 

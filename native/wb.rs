@@ -17,8 +17,6 @@ pub mod atom {
 
 pub struct WbRsc(pub Mutex<Option<fjall::OwnedWriteBatch>>);
 
-impl std::panic::RefUnwindSafe for WbRsc {}
-
 #[rustler::resource_impl]
 impl Resource for WbRsc {}
 
