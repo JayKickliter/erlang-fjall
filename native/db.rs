@@ -30,7 +30,7 @@ impl Resource for DbRsc {}
 // NIFs                                                                   //
 ////////////////////////////////////////////////////////////////////////////
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn db_open_nif(
     path: rustler::Binary,
     options: Vec<(rustler::Atom, rustler::Term)>,
@@ -44,17 +44,16 @@ pub fn db_open_nif(
     FjallResult(result)
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn db_keyspace(
     db: ResourceArc<DbRsc>,
     name: String,
     _options: Vec<(rustler::Atom, rustler::Term)>,
 ) -> FjallResult<ResourceArc<KsRsc>> {
     let result = (|| {
-        let ks = db
-            .0
-            .keyspace(&name, fjall::KeyspaceCreateOptions::default)
-            .to_erlang_result()?;
+        let ks =
+            db.0.keyspace(&name, fjall::KeyspaceCreateOptions::default)
+                .to_erlang_result()?;
         Ok(ResourceArc::new(KsRsc(ks)))
     })();
     FjallResult(result)
@@ -69,7 +68,7 @@ pub fn db_batch(db: ResourceArc<DbRsc>) -> FjallResult<ResourceArc<WbRsc>> {
     FjallResult(result)
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn db_persist(db: ResourceArc<DbRsc>, mode: rustler::Atom) -> FjallOkResult {
     let result = (|| {
         let persist_mode = if mode == atom::buffer() {

@@ -16,7 +16,7 @@ impl Resource for KsRsc {}
 // Keyspace NIFs                                                          //
 ////////////////////////////////////////////////////////////////////////////
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn ks_get(ks: ResourceArc<KsRsc>, key: rustler::Binary) -> FjallBinaryResult {
     let result = (|| {
         let val = ks.0.get(key.as_slice()).to_erlang_result()?;
@@ -28,7 +28,7 @@ pub fn ks_get(ks: ResourceArc<KsRsc>, key: rustler::Binary) -> FjallBinaryResult
     FjallBinaryResult(result)
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn ks_insert(
     ks: ResourceArc<KsRsc>,
     key: rustler::Binary,
@@ -42,7 +42,7 @@ pub fn ks_insert(
     FjallOkResult(result)
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn ks_remove(ks: ResourceArc<KsRsc>, key: rustler::Binary) -> FjallOkResult {
     let result = (|| {
         ks.0.remove(key.as_slice()).to_erlang_result()?;
@@ -51,7 +51,7 @@ pub fn ks_remove(ks: ResourceArc<KsRsc>, key: rustler::Binary) -> FjallOkResult 
     FjallOkResult(result)
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn ks_disk_space(ks: ResourceArc<KsRsc>) -> u64 {
     ks.0.disk_space()
 }

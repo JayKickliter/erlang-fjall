@@ -21,7 +21,7 @@ impl Resource for SnapshotRsc {}
 // Snapshot NIFs                                                          //
 ////////////////////////////////////////////////////////////////////////////
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn snapshot_get(
     snapshot: ResourceArc<SnapshotRsc>,
     ks: ResourceArc<OtxKsRsc>,

@@ -66,14 +66,18 @@ pub fn wb_insert(
 }
 
 #[rustler::nif]
-pub fn wb_remove(batch: ResourceArc<WbRsc>, ks: ResourceArc<KsRsc>, key: rustler::Binary) -> rustler::Atom {
+pub fn wb_remove(
+    batch: ResourceArc<WbRsc>,
+    ks: ResourceArc<KsRsc>,
+    key: rustler::Binary,
+) -> rustler::Atom {
     let _ = batch.with_batch_mut(|b| {
         b.remove(&ks.0, key.as_slice());
     });
     atom::ok()
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn wb_commit(batch: ResourceArc<WbRsc>) -> FjallOkResult {
     let result = (|| {
         let wb = batch.take_batch()?;
@@ -83,7 +87,7 @@ pub fn wb_commit(batch: ResourceArc<WbRsc>) -> FjallOkResult {
     FjallOkResult(result)
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn wb_commit_with_mode(batch: ResourceArc<WbRsc>, _mode: rustler::Atom) -> FjallOkResult {
     let result = (|| {
         // Note: OwnedWriteBatch::commit() doesn't support persist modes
@@ -97,14 +101,10 @@ pub fn wb_commit_with_mode(batch: ResourceArc<WbRsc>, _mode: rustler::Atom) -> F
 
 #[rustler::nif]
 pub fn wb_len(batch: ResourceArc<WbRsc>) -> usize {
-    batch
-        .with_batch_mut(|b| b.len())
-        .unwrap_or(0)
+    batch.with_batch_mut(|b| b.len()).unwrap_or(0)
 }
 
 #[rustler::nif]
 pub fn wb_is_empty(batch: ResourceArc<WbRsc>) -> bool {
-    batch
-        .with_batch_mut(|b| b.is_empty())
-        .unwrap_or(true)
+    batch.with_batch_mut(|b| b.is_empty()).unwrap_or(true)
 }

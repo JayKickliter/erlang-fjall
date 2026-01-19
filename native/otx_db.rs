@@ -23,7 +23,7 @@ impl Resource for OtxDbRsc {}
 // NIFs                                                                   //
 ////////////////////////////////////////////////////////////////////////////
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_db_open_nif(
     path: rustler::Binary,
     options: Vec<(rustler::Atom, rustler::Term)>,
@@ -37,17 +37,16 @@ pub fn otx_db_open_nif(
     FjallResult(result)
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_db_keyspace(
     db: ResourceArc<OtxDbRsc>,
     name: String,
     _options: Vec<(rustler::Atom, rustler::Term)>,
 ) -> FjallResult<ResourceArc<OtxKsRsc>> {
     let result = (|| {
-        let ks = db
-            .0
-            .keyspace(&name, fjall::KeyspaceCreateOptions::default)
-            .to_erlang_result()?;
+        let ks =
+            db.0.keyspace(&name, fjall::KeyspaceCreateOptions::default)
+                .to_erlang_result()?;
         Ok(ResourceArc::new(OtxKsRsc(ks)))
     })();
     FjallResult(result)
@@ -59,14 +58,14 @@ pub fn otx_db_write_tx(db: ResourceArc<OtxDbRsc>) -> FjallResult<ResourceArc<Wri
     FjallResult(result)
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_db_snapshot(db: ResourceArc<OtxDbRsc>) -> FjallResult<ResourceArc<SnapshotRsc>> {
     let snapshot = db.0.read_tx();
     let result = Ok(ResourceArc::new(SnapshotRsc { snapshot }));
     FjallResult(result)
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_db_persist(db: ResourceArc<OtxDbRsc>, mode: rustler::Atom) -> FjallOkResult {
     let result = (|| {
         let persist_mode = if mode == atom::buffer() {

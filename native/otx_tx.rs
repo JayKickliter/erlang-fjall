@@ -75,7 +75,7 @@ pub fn otx_tx_insert(
     FjallOkResult(result)
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_tx_get(
     txn: ResourceArc<WriteTxRsc>,
     ks: ResourceArc<OtxKsRsc>,
@@ -105,7 +105,7 @@ pub fn otx_tx_remove(
     FjallOkResult(result)
 }
 
-#[rustler::nif]
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_tx_commit(txn: ResourceArc<WriteTxRsc>) -> FjallOkResult {
     let result = (|| {
         let transaction = txn.take_txn()?;
