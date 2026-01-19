@@ -77,7 +77,7 @@ Options = [
 {ok, Database} = fjall_otx_db:open("/var/lib/txn_db", Options)
 ```
 
-See `fjall:config_option/0` for available configuration options.
+See `t:fjall:config_option/0` for available configuration options.
 """.
 -spec open(Path :: file:name_all(), Options :: [fjall:config_option()]) ->
     fjall:result(otx_db()).
@@ -180,7 +180,7 @@ Returns `ok` on success or `{error, Reason}` on failure.
 ok = fjall_otx_db:persist(Database, sync_all)
 ```
 
-See `fjall:persist_mode/0` for available persist modes.
+See `t:fjall:persist_mode/0` for available persist modes.
 """.
 -spec persist(Database :: otx_db(), Mode :: fjall:persist_mode()) -> fjall:result().
 persist(Database, Mode) ->

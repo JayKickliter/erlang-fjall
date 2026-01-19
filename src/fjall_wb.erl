@@ -124,7 +124,7 @@ ok = fjall_wb:insert(Batch, Keyspace, <<"key">>, <<"value">>),
 ok = fjall_wb:commit(Batch, sync_all)
 ```
 
-See `fjall:persist_mode/0` for available persist modes.
+See `t:fjall:persist_mode/0` for available persist modes.
 """.
 -spec commit(Batch :: wb(), Mode :: fjall:persist_mode()) -> fjall:result().
 commit(Batch, Mode) ->
