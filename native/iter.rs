@@ -165,7 +165,16 @@ pub fn iter_next<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>) -> Term<'a> {
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn iter_collect<'a>(
+pub fn iter_collect<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>, limit: usize) -> Term<'a> {
+    iter_collect_n(env, iter, Some(limit))
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
+pub fn iter_collect<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>) -> Term<'a> {
+    iter_collect_n(env, iter, None)
+}
+
+pub fn iter_collect_n<'a>(
     env: Env<'a>,
     iter: ResourceArc<IterRsc>,
     limit: Option<usize>,

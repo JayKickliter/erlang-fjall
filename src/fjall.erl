@@ -92,6 +92,7 @@ ok = fjall_otx_tx:commit(Txn).
     otx_ks_range/4,
     otx_ks_prefix/3,
     iter_next/1,
+    iter_collect/1,
     iter_collect/2,
     iter_destroy/1
 ]).
@@ -335,9 +336,12 @@ otx_ks_prefix(_Ks, _Prefix, _Options) -> erlang:nif_error({nif_not_loaded, ?MODU
 
 -spec iter_next(Iter :: fjall_iter:iter()) -> {ok, {binary(), binary()}} | done | {error, term()}.
 iter_next(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec iter_collect(Iter :: fjall_iter:iter()) -> {ok, [{binary(), binary()}]} | {error, term()}.
+iter_collect(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec iter_collect(Iter :: fjall_iter:iter(), Limit :: non_neg_integer()) ->
     {ok, [{binary(), binary()}]} | {error, term()}.
 iter_collect(_Iter, _Limit) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+
 -spec iter_destroy(Iter :: fjall_iter:iter()) -> ok.
 iter_destroy(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 

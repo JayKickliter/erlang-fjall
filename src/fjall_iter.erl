@@ -76,7 +76,7 @@ io:format("Found ~p items~n", [length(Items)])
 ```
 """.
 -spec collect(iter()) -> {ok, [kv()]} | {error, term()}.
-collect(Iter) -> fjall:iter_collect(Iter, 0).
+collect(Iter) -> fjall:iter_collect(Iter).
 
 -doc """
 Explicitly destroys an iterator to release resources early.
