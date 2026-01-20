@@ -81,7 +81,7 @@ open(Path, Options) ->
 -spec open_nif(Path :: binary(), Options :: [fjall:config_option()]) ->
     fjall:result(db()).
 open_nif(Path, Options) ->
-    fjall:db_open_nif(Path, Options).
+    fjall_nif:db_open(Path, Options).
 
 -doc """
 Opens or creates a keyspace within a database with default options.
@@ -117,7 +117,7 @@ Returns `{ok, Keyspace}` on success or `{error, Reason}` on failure.
 -spec keyspace(Database :: db(), Name :: binary(), Options :: [fjall:ks_option()]) ->
     fjall:result(fjall_ks:ks()).
 keyspace(Database, Name, Options) ->
-    fjall:db_keyspace(Database, Name, Options).
+    fjall_nif:db_keyspace(Database, Name, Options).
 
 -doc """
 Creates a new write batch for atomic multi-keyspace writes.
@@ -144,7 +144,7 @@ See `m:fjall_wb` for write batch operations.
 """.
 -spec batch(Database :: db()) -> fjall:result(fjall_wb:wb()).
 batch(Database) ->
-    fjall:db_batch(Database).
+    fjall_nif:db_batch(Database).
 
 -doc """
 Persists the database to disk with the specified durability mode.
@@ -165,7 +165,7 @@ See `t:fjall:persist_mode/0` for available persist modes.
 """.
 -spec persist(Database :: db(), Mode :: fjall:persist_mode()) -> fjall:result().
 persist(Database, Mode) ->
-    fjall:db_persist(Database, Mode).
+    fjall_nif:db_persist(Database, Mode).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Private Helper Functions                                               %%

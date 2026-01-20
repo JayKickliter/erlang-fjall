@@ -62,7 +62,7 @@ in the Rust documentation.
 -spec insert(Keyspace :: otx_ks(), Key :: binary(), Value :: binary()) ->
     fjall:result().
 insert(Keyspace, Key, Value) ->
-    fjall:otx_ks_insert(Keyspace, Key, Value).
+    fjall_nif:otx_ks_insert(Keyspace, Key, Value).
 
 -doc """
 Retrieves the value associated with a key from the keyspace.
@@ -88,7 +88,7 @@ in the Rust documentation.
 -spec get(Keyspace :: otx_ks(), Key :: binary()) ->
     {ok, binary()} | not_found | {error, term()}.
 get(Keyspace, Key) ->
-    case fjall:otx_ks_get(Keyspace, Key) of
+    case fjall_nif:otx_ks_get(Keyspace, Key) of
         {ok, Value} -> {ok, Value};
         {error, not_found} -> not_found;
         {error, Reason} -> {error, Reason}
@@ -113,7 +113,7 @@ in the Rust documentation.
 """.
 -spec remove(Keyspace :: otx_ks(), Key :: binary()) -> fjall:result().
 remove(Keyspace, Key) ->
-    fjall:otx_ks_remove(Keyspace, Key).
+    fjall_nif:otx_ks_remove(Keyspace, Key).
 
 -doc """
 Removes and returns the value associated with a key.
@@ -142,7 +142,7 @@ in the Rust documentation.
 """.
 -spec take(Keyspace :: otx_ks(), Key :: binary()) -> fjall:result(binary()).
 take(Keyspace, Key) ->
-    fjall:otx_ks_take(Keyspace, Key).
+    fjall_nif:otx_ks_take(Keyspace, Key).
 
 -doc """
 Checks if a key exists in the keyspace.
@@ -166,7 +166,7 @@ in the Rust documentation.
 -spec contains_key(Keyspace :: otx_ks(), Key :: binary()) ->
     fjall:result(boolean()).
 contains_key(Keyspace, Key) ->
-    fjall:otx_ks_contains_key(Keyspace, Key).
+    fjall_nif:otx_ks_contains_key(Keyspace, Key).
 
 -doc """
 Returns the size of the value for a key in bytes.
@@ -195,7 +195,7 @@ in the Rust documentation.
 -spec size_of(Keyspace :: otx_ks(), Key :: binary()) ->
     fjall:result(non_neg_integer()).
 size_of(Keyspace, Key) ->
-    fjall:otx_ks_size_of(Keyspace, Key).
+    fjall_nif:otx_ks_size_of(Keyspace, Key).
 
 -doc """
 Returns the approximate number of key-value pairs in the keyspace.
@@ -215,7 +215,7 @@ in the Rust documentation.
 """.
 -spec approximate_len(Keyspace :: otx_ks()) -> non_neg_integer().
 approximate_len(Keyspace) ->
-    fjall:otx_ks_approximate_len(Keyspace).
+    fjall_nif:otx_ks_approximate_len(Keyspace).
 
 -doc """
 Returns the first key-value pair in the keyspace (by key order).
@@ -244,7 +244,7 @@ in the Rust documentation.
 -spec first_key_value(Keyspace :: otx_ks()) ->
     fjall:result({binary(), binary()}).
 first_key_value(Keyspace) ->
-    fjall:otx_ks_first_key_value(Keyspace).
+    fjall_nif:otx_ks_first_key_value(Keyspace).
 
 -doc """
 Returns the last key-value pair in the keyspace (by key order).
@@ -273,7 +273,7 @@ in the Rust documentation.
 -spec last_key_value(Keyspace :: otx_ks()) ->
     fjall:result({binary(), binary()}).
 last_key_value(Keyspace) ->
-    fjall:otx_ks_last_key_value(Keyspace).
+    fjall_nif:otx_ks_last_key_value(Keyspace).
 
 -doc """
 Returns the path to the keyspace directory on disk.
@@ -290,7 +290,7 @@ in the Rust documentation.
 """.
 -spec path(Keyspace :: otx_ks()) -> binary().
 path(Keyspace) ->
-    fjall:otx_ks_path(Keyspace).
+    fjall_nif:otx_ks_path(Keyspace).
 
 -doc """
 Creates an iterator over all key-value pairs in the keyspace.
@@ -326,7 +326,7 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 ```
 """.
 -spec iter(otx_ks(), [fjall:iter_option()]) -> fjall:result(fjall_iter:iter()).
-iter(Ks, Options) -> fjall:otx_ks_iter(Ks, Options).
+iter(Ks, Options) -> fjall_nif:otx_ks_iter(Ks, Options).
 
 -doc """
 Creates an iterator over a range of keys `[Start, End)`.
@@ -369,7 +369,7 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 """.
 -spec range(otx_ks(), Start :: binary(), End :: binary(), [fjall:iter_option()]) ->
     fjall:result(fjall_iter:iter()).
-range(Ks, Start, End, Options) -> fjall:otx_ks_range(Ks, Start, End, Options).
+range(Ks, Start, End, Options) -> fjall_nif:otx_ks_range(Ks, Start, End, Options).
 
 -doc """
 Creates an iterator over keys with a given prefix.
@@ -406,4 +406,4 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 ```
 """.
 -spec prefix(otx_ks(), binary(), [fjall:iter_option()]) -> fjall:result(fjall_iter:iter()).
-prefix(Ks, Prefix, Options) -> fjall:otx_ks_prefix(Ks, Prefix, Options).
+prefix(Ks, Prefix, Options) -> fjall_nif:otx_ks_prefix(Ks, Prefix, Options).

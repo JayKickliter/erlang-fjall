@@ -67,7 +67,7 @@ See `t:fjall:config_option/0` for available configuration options.
     fjall:result(otx_db()).
 open(Path, Options) ->
     PathBinary = path_to_binary(Path),
-    fjall:otx_db_open_nif(PathBinary, Options).
+    fjall_nif:otx_db_open(PathBinary, Options).
 
 -doc """
 Opens or creates a keyspace in a transactional database with default options.
@@ -101,7 +101,7 @@ Returns `{ok, Keyspace}` on success or `{error, Reason}` on failure.
 -spec keyspace(Database :: otx_db(), Name :: binary(), Options :: [fjall:ks_option()]) ->
     fjall:result(fjall_otx_ks:otx_ks()).
 keyspace(Database, Name, Options) ->
-    fjall:otx_db_keyspace(Database, Name, Options).
+    fjall_nif:otx_db_keyspace(Database, Name, Options).
 
 -doc """
 Begins a write transaction on the database.
@@ -128,7 +128,7 @@ See `m:fjall_otx_tx` for transaction operations.
 """.
 -spec write_tx(Database :: otx_db()) -> fjall:result(fjall_otx_tx:write_tx()).
 write_tx(Database) ->
-    fjall:otx_db_write_tx(Database).
+    fjall_nif:otx_db_write_tx(Database).
 
 -doc """
 Begins a read transaction (snapshot) on the database.
@@ -153,7 +153,7 @@ See `m:fjall_snapshot` for snapshot operations.
 """.
 -spec snapshot(Database :: otx_db()) -> fjall:result(fjall_snapshot:snapshot()).
 snapshot(Database) ->
-    fjall:otx_db_snapshot(Database).
+    fjall_nif:otx_db_snapshot(Database).
 
 -doc """
 Persists the database to disk with the specified durability mode.
@@ -174,7 +174,7 @@ See `t:fjall:persist_mode/0` for available persist modes.
 """.
 -spec persist(Database :: otx_db(), Mode :: fjall:persist_mode()) -> fjall:result().
 persist(Database, Mode) ->
-    fjall:otx_db_persist(Database, Mode).
+    fjall_nif:otx_db_persist(Database, Mode).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Private Helper Functions                                               %%

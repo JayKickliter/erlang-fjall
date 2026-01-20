@@ -31,7 +31,7 @@ impl Resource for DbRsc {}
 ////////////////////////////////////////////////////////////////////////////
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn db_open_nif(
+pub fn db_open(
     path: rustler::Binary,
     options: Vec<(rustler::Atom, rustler::Term)>,
 ) -> FjallResult<ResourceArc<DbRsc>> {

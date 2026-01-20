@@ -47,7 +47,7 @@ in the Rust documentation.
     Key :: binary()
 ) -> {ok, binary()} | not_found | {error, term()}.
 get(Snapshot, Keyspace, Key) ->
-    case fjall:snapshot_get(Snapshot, Keyspace, Key) of
+    case fjall_nif:snapshot_get(Snapshot, Keyspace, Key) of
         {ok, Value} -> {ok, Value};
         {error, not_found} -> not_found;
         {error, Reason} -> {error, Reason}

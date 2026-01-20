@@ -9,4 +9,4 @@ mod otx_tx;
 mod snapshot;
 mod wb;
 
-rustler::init!("fjall");
+rustler::init!("fjall_nif");

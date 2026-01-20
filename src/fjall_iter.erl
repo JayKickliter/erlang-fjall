@@ -42,7 +42,7 @@ end
 ```
 """.
 -spec next(iter()) -> {ok, kv()} | done | {error, term()}.
-next(Iter) -> fjall:iter_next(Iter).
+next(Iter) -> fjall_nif:iter_next(Iter).
 
 -doc """
 Takes up to N items from the iterator.
@@ -59,7 +59,7 @@ lists:foreach(fun({K, V}) -> io:format("~s: ~s~n", [K, V]) end, Items)
 ```
 """.
 -spec take(iter(), pos_integer()) -> {ok, [kv()]} | {error, term()}.
-take(Iter, N) -> fjall:iter_collect(Iter, N).
+take(Iter, N) -> fjall_nif:iter_collect(Iter, N).
 
 -doc """
 Collects all remaining items from the iterator.
@@ -76,7 +76,7 @@ io:format("Found ~p items~n", [length(Items)])
 ```
 """.
 -spec collect(iter()) -> {ok, [kv()]} | {error, term()}.
-collect(Iter) -> fjall:iter_collect(Iter).
+collect(Iter) -> fjall_nif:iter_collect(Iter).
 
 -doc """
 Explicitly destroys an iterator to release resources early.
@@ -95,4 +95,4 @@ ok = fjall_iter:destroy(Iter)
 ```
 """.
 -spec destroy(iter()) -> ok.
-destroy(Iter) -> fjall:iter_destroy(Iter).
+destroy(Iter) -> fjall_nif:iter_destroy(Iter).

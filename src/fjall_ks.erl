@@ -59,7 +59,7 @@ in the Rust documentation.
 -spec get(Keyspace :: ks(), Key :: binary()) ->
     {ok, binary()} | not_found | {error, term()}.
 get(Keyspace, Key) ->
-    case fjall:ks_get(Keyspace, Key) of
+    case fjall_nif:ks_get(Keyspace, Key) of
         {ok, Value} -> {ok, Value};
         {error, not_found} -> not_found;
         {error, Reason} -> {error, Reason}
@@ -85,7 +85,7 @@ in the Rust documentation.
 -spec insert(Keyspace :: ks(), Key :: binary(), Value :: binary()) ->
     fjall:result().
 insert(Keyspace, Key, Value) ->
-    fjall:ks_insert(Keyspace, Key, Value).
+    fjall_nif:ks_insert(Keyspace, Key, Value).
 
 -doc """
 Removes a key-value pair from the keyspace.
@@ -105,7 +105,7 @@ in the Rust documentation.
 """.
 -spec remove(Keyspace :: ks(), Key :: binary()) -> fjall:result().
 remove(Keyspace, Key) ->
-    fjall:ks_remove(Keyspace, Key).
+    fjall_nif:ks_remove(Keyspace, Key).
 
 -doc """
 Returns the approximate disk space used by the keyspace in bytes.
@@ -124,7 +124,7 @@ in the Rust documentation.
 """.
 -spec disk_space(Keyspace :: ks()) -> non_neg_integer().
 disk_space(Keyspace) ->
-    fjall:ks_disk_space(Keyspace).
+    fjall_nif:ks_disk_space(Keyspace).
 
 -doc """
 Creates an iterator over all key-value pairs in the keyspace.
@@ -160,7 +160,7 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 ```
 """.
 -spec iter(ks(), [fjall:iter_option()]) -> fjall:result(fjall_iter:iter()).
-iter(Ks, Options) -> fjall:ks_iter(Ks, Options).
+iter(Ks, Options) -> fjall_nif:ks_iter(Ks, Options).
 
 -doc """
 Creates an iterator over a range of keys `[Start, End)`.
@@ -203,7 +203,7 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 """.
 -spec range(ks(), Start :: binary(), End :: binary(), [fjall:iter_option()]) ->
     fjall:result(fjall_iter:iter()).
-range(Ks, Start, End, Options) -> fjall:ks_range(Ks, Start, End, Options).
+range(Ks, Start, End, Options) -> fjall_nif:ks_range(Ks, Start, End, Options).
 
 -doc """
 Creates an iterator over keys with a given prefix.
@@ -240,4 +240,4 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 ```
 """.
 -spec prefix(ks(), binary(), [fjall:iter_option()]) -> fjall:result(fjall_iter:iter()).
-prefix(Ks, Prefix, Options) -> fjall:ks_prefix(Ks, Prefix, Options).
+prefix(Ks, Prefix, Options) -> fjall_nif:ks_prefix(Ks, Prefix, Options).

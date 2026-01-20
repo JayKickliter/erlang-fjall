@@ -56,7 +56,7 @@ in the Rust documentation.
     Value :: binary()
 ) -> fjall:result().
 insert(Txn, Keyspace, Key, Value) ->
-    fjall:otx_tx_insert(Txn, Keyspace, Key, Value).
+    fjall_nif:otx_tx_insert(Txn, Keyspace, Key, Value).
 
 -doc """
 Retrieves a value from a write transaction.
@@ -85,7 +85,7 @@ in the Rust documentation.
 -spec get(Txn :: write_tx(), Keyspace :: fjall_otx_ks:otx_ks(), Key :: binary()) ->
     {ok, binary()} | not_found | {error, term()}.
 get(Txn, Keyspace, Key) ->
-    case fjall:otx_tx_get(Txn, Keyspace, Key) of
+    case fjall_nif:otx_tx_get(Txn, Keyspace, Key) of
         {ok, Value} -> {ok, Value};
         {error, not_found} -> not_found;
         {error, Reason} -> {error, Reason}
@@ -113,7 +113,7 @@ in the Rust documentation.
 -spec remove(Txn :: write_tx(), Keyspace :: fjall_otx_ks:otx_ks(), Key :: binary()) ->
     fjall:result().
 remove(Txn, Keyspace, Key) ->
-    fjall:otx_tx_remove(Txn, Keyspace, Key).
+    fjall_nif:otx_tx_remove(Txn, Keyspace, Key).
 
 -doc """
 Commits a write transaction, making all changes durable.
@@ -146,7 +146,7 @@ in the Rust documentation.
 """.
 -spec commit(Txn :: write_tx()) -> fjall:result().
 commit(Txn) ->
-    fjall:otx_tx_commit(Txn).
+    fjall_nif:otx_tx_commit(Txn).
 
 -doc """
 Rolls back a write transaction, discarding all changes.
@@ -169,4 +169,4 @@ in the Rust documentation.
 """.
 -spec rollback(Txn :: write_tx()) -> fjall:result().
 rollback(Txn) ->
-    fjall:otx_tx_rollback(Txn).
+    fjall_nif:otx_tx_rollback(Txn).

@@ -24,7 +24,7 @@ impl Resource for OtxDbRsc {}
 ////////////////////////////////////////////////////////////////////////////
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn otx_db_open_nif(
+pub fn otx_db_open(
     path: rustler::Binary,
     options: Vec<(rustler::Atom, rustler::Term)>,
 ) -> FjallResult<ResourceArc<OtxDbRsc>> {

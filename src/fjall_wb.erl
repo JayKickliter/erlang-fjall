@@ -57,7 +57,7 @@ in the Rust documentation.
     Value :: binary()
 ) -> ok.
 insert(Batch, Keyspace, Key, Value) ->
-    fjall:wb_insert(Batch, Keyspace, Key, Value).
+    fjall_nif:wb_insert(Batch, Keyspace, Key, Value).
 
 -doc """
 Removes a key from the batch for a specific keyspace.
@@ -80,7 +80,7 @@ in the Rust documentation.
 """.
 -spec remove(Batch :: wb(), Keyspace :: fjall_ks:ks(), Key :: binary()) -> ok.
 remove(Batch, Keyspace, Key) ->
-    fjall:wb_remove(Batch, Keyspace, Key).
+    fjall_nif:wb_remove(Batch, Keyspace, Key).
 
 -doc """
 Commits the batch with default persistence mode.
@@ -107,7 +107,7 @@ in the Rust documentation.
 """.
 -spec commit(Batch :: wb()) -> fjall:result().
 commit(Batch) ->
-    fjall:wb_commit(Batch).
+    fjall_nif:wb_commit(Batch).
 
 -doc """
 Commits the batch with a specified persistence mode.
@@ -128,7 +128,7 @@ See `t:fjall:persist_mode/0` for available persist modes.
 """.
 -spec commit(Batch :: wb(), Mode :: fjall:persist_mode()) -> fjall:result().
 commit(Batch, Mode) ->
-    fjall:wb_commit_with_mode(Batch, Mode).
+    fjall_nif:wb_commit_with_mode(Batch, Mode).
 
 -doc """
 Returns the number of operations in the batch.
@@ -147,7 +147,7 @@ in the Rust documentation.
 """.
 -spec len(Batch :: wb()) -> non_neg_integer().
 len(Batch) ->
-    fjall:wb_len(Batch).
+    fjall_nif:wb_len(Batch).
 
 -doc """
 Returns `true` if the batch contains no operations.
@@ -166,4 +166,4 @@ in the Rust documentation.
 """.
 -spec is_empty(Batch :: wb()) -> boolean().
 is_empty(Batch) ->
-    fjall:wb_is_empty(Batch).
+    fjall_nif:wb_is_empty(Batch).

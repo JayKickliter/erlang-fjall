@@ -38,57 +38,6 @@ ok = fjall_otx_tx:commit(Txn).
 ```
 """.
 
--on_load(load/0).
-
-% NIF functions used by other modules.
--export([
-    db_batch/1,
-    db_keyspace/3,
-    db_open_nif/2,
-    db_persist/2,
-    iter_collect/1,
-    iter_collect/2,
-    iter_destroy/1,
-    iter_next/1,
-    ks_disk_space/1,
-    ks_get/2,
-    ks_insert/3,
-    ks_iter/2,
-    ks_prefix/3,
-    ks_range/4,
-    ks_remove/2,
-    otx_db_keyspace/3,
-    otx_db_open_nif/2,
-    otx_db_persist/2,
-    otx_db_snapshot/1,
-    otx_db_write_tx/1,
-    otx_ks_approximate_len/1,
-    otx_ks_contains_key/2,
-    otx_ks_first_key_value/1,
-    otx_ks_get/2,
-    otx_ks_insert/3,
-    otx_ks_iter/2,
-    otx_ks_last_key_value/1,
-    otx_ks_path/1,
-    otx_ks_prefix/3,
-    otx_ks_range/4,
-    otx_ks_remove/2,
-    otx_ks_size_of/2,
-    otx_ks_take/2,
-    otx_tx_commit/1,
-    otx_tx_get/3,
-    otx_tx_insert/4,
-    otx_tx_remove/3,
-    otx_tx_rollback/1,
-    snapshot_get/3,
-    wb_commit/1,
-    wb_commit_with_mode/2,
-    wb_insert/4,
-    wb_is_empty/1,
-    wb_len/1,
-    wb_remove/3
-]).
-
 -export_type([
     compression/0,
     config_option/0,
@@ -97,6 +46,46 @@ ok = fjall_otx_tx:commit(Txn).
     persist_mode/0,
     result/0,
     result/1
+]).
+
+%% Flattened API - dispatch on tuple tags
+-export([
+    %% Database
+    open/1, open/2,
+    keyspace/2, keyspace/3,
+    batch/1,
+    write_tx/1,
+    snapshot/1,
+    persist/2,
+
+    %% Key-value operations
+    get/2, get/3,
+    insert/3, insert/4,
+    remove/2, remove/3,
+
+    %% Batch/transaction
+    commit/1, commit/2,
+    rollback/1,
+    len/1,
+    is_empty/1,
+
+    %% Keyspace info
+    take/2,
+    contains_key/2,
+    size_of/2,
+    disk_space/1,
+    approximate_len/1,
+    first_key_value/1,
+    last_key_value/1,
+    path/1,
+
+    %% Iterators
+    iter/1, iter/2,
+    range/3, range/4,
+    prefix/2, prefix/3,
+    next/1,
+    collect/1,
+    destroy/1
 ]).
 
 -doc """
@@ -207,151 +196,263 @@ Result type for operations that return a value on success.
 """.
 -type result(T) :: {ok, T} | {error, Reason :: term()}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% NIF Stubs                                                              %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%--------------------------------------------------------------------------
+%% Database
+%%--------------------------------------------------------------------------
 
-% fjall_db NIFs
--spec db_open_nif(Path :: binary(), Options :: list()) -> result(fjall_db:db()).
-db_open_nif(_Path, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec db_keyspace(Db :: fjall_db:db(), Name :: binary(), Options :: list()) ->
-    result(fjall_ks:ks()).
-db_keyspace(_Db, _Name, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec db_batch(Db :: fjall_db:db()) -> result(fjall_wb:wb()).
-db_batch(_Db) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec db_persist(Db :: fjall_db:db(), Mode :: persist_mode()) -> result().
-db_persist(_Db, _Mode) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec open(Path :: file:name_all()) -> result({db, reference()} | {otx_db, reference()}).
+open(Path) ->
+    open(Path, []).
 
-% fjall_ks NIFs
--spec ks_get(Ks :: fjall_ks:ks(), Key :: binary()) -> result(binary()).
-ks_get(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec ks_insert(Ks :: fjall_ks:ks(), Key :: binary(), Value :: binary()) -> result().
-ks_insert(_Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec ks_remove(Ks :: fjall_ks:ks(), Key :: binary()) -> result().
-ks_remove(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec ks_disk_space(Ks :: fjall_ks:ks()) -> non_neg_integer().
-ks_disk_space(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec open(Path :: file:name_all(), Options :: [config_option() | {optimistic, boolean()}]) ->
+    result({db, reference()} | {otx_db, reference()}).
+open(Path, Options) ->
+    case proplists:get_value(optimistic, Options, false) of
+        true ->
+            OptsWithoutTx = proplists:delete(optimistic, Options),
+            wrap_otx_db(fjall_otx_db:open(Path, OptsWithoutTx));
+        false ->
+            case fjall_db:open(Path, Options) of
+                {ok, Ref} -> {ok, {db, Ref}};
+                Err -> Err
+            end
+    end.
 
-% fjall_wb NIFs
--spec wb_insert(Batch :: fjall_wb:wb(), Ks :: fjall_ks:ks(), Key :: binary(), Value :: binary()) ->
+-spec batch({db, reference()}) -> result({batch, reference()}).
+batch({db, Ref}) ->
+    case fjall_db:batch(Ref) of
+        {ok, BatchRef} -> {ok, {batch, BatchRef}};
+        Err -> Err
+    end.
+
+-spec persist({db, reference()}, Mode :: persist_mode()) -> result().
+persist({db, Ref}, Mode) ->
+    fjall_db:persist(Ref, Mode);
+persist({otx_db, Ref}, Mode) ->
+    fjall_otx_db:persist(Ref, Mode).
+
+-spec keyspace({db, reference()} | {otx_db, reference()}, Name :: binary()) ->
+    result({ks, reference()} | {otx_ks, reference()}).
+keyspace({db, Ref}, Name) ->
+    wrap_ks(fjall_db:keyspace(Ref, Name));
+keyspace({otx_db, Ref}, Name) ->
+    wrap_otx_ks(fjall_otx_db:keyspace(Ref, Name)).
+
+-spec keyspace({db, reference()} | {otx_db, reference()}, Name :: binary(), Opts :: [ks_option()]) ->
+    result({ks, reference()} | {otx_ks, reference()}).
+keyspace({db, Ref}, Name, Opts) ->
+    wrap_ks(fjall_db:keyspace(Ref, Name, Opts));
+keyspace({otx_db, Ref}, Name, Opts) ->
+    wrap_otx_ks(fjall_otx_db:keyspace(Ref, Name, Opts)).
+
+-spec write_tx({otx_db, reference()}) -> result({tx, reference()}).
+write_tx({otx_db, Ref}) ->
+    wrap_tx(fjall_otx_db:write_tx(Ref)).
+
+-spec snapshot({otx_db, reference()}) -> result({snapshot, reference()}).
+snapshot({otx_db, Ref}) ->
+    wrap_snapshot(fjall_otx_db:snapshot(Ref)).
+
+%%--------------------------------------------------------------------------
+%% Key-Value Operations
+%%--------------------------------------------------------------------------
+
+-spec get({ks, reference()} | {otx_ks, reference()}, Key :: binary()) -> result(binary()).
+get({ks, Ref}, Key) ->
+    fjall_ks:get(Ref, Key);
+get({otx_ks, Ref}, Key) ->
+    fjall_otx_ks:get(Ref, Key).
+
+-spec get
+    ({tx, reference()}, {otx_ks, reference()}, Key :: binary()) -> result(binary());
+    ({snapshot, reference()}, {otx_ks, reference()}, Key :: binary()) -> result(binary()).
+get({tx, TxRef}, {otx_ks, KsRef}, Key) ->
+    fjall_otx_tx:get(TxRef, KsRef, Key);
+get({snapshot, SnapRef}, {otx_ks, KsRef}, Key) ->
+    fjall_snapshot:get(SnapRef, KsRef, Key).
+
+-spec insert({ks, reference()} | {otx_ks, reference()}, Key :: binary(), Value :: binary()) ->
     result().
-wb_insert(_Batch, _Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec wb_remove(Batch :: fjall_wb:wb(), Ks :: fjall_ks:ks(), Key :: binary()) -> result().
-wb_remove(_Batch, _Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec wb_commit(Batch :: fjall_wb:wb()) -> result().
-wb_commit(_Batch) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec wb_commit_with_mode(Batch :: fjall_wb:wb(), Mode :: persist_mode()) -> result().
-wb_commit_with_mode(_Batch, _Mode) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec wb_len(Batch :: fjall_wb:wb()) -> non_neg_integer().
-wb_len(_Batch) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec wb_is_empty(Batch :: fjall_wb:wb()) -> boolean().
-wb_is_empty(_Batch) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+insert({ks, Ref}, Key, Value) ->
+    fjall_ks:insert(Ref, Key, Value);
+insert({otx_ks, Ref}, Key, Value) ->
+    fjall_otx_ks:insert(Ref, Key, Value).
 
-% fjall_otx_db NIFs
--spec otx_db_open_nif(Path :: binary(), Options :: list()) -> result(fjall_otx_db:otx_db()).
-otx_db_open_nif(_Path, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_db_keyspace(Db :: fjall_otx_db:otx_db(), Name :: binary(), Options :: list()) ->
-    result(fjall_otx_ks:otx_ks()).
-otx_db_keyspace(_Db, _Name, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_db_write_tx(Db :: fjall_otx_db:otx_db()) -> result(fjall_otx_tx:write_tx()).
-otx_db_write_tx(_Db) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_db_snapshot(Db :: fjall_otx_db:otx_db()) -> result(fjall_snapshot:snapshot()).
-otx_db_snapshot(_Db) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_db_persist(Db :: fjall_otx_db:otx_db(), Mode :: persist_mode()) -> result().
-otx_db_persist(_Db, _Mode) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec insert
+    ({batch, reference()}, {ks, reference()}, Key :: binary(), Value :: binary()) -> result();
+    ({tx, reference()}, {otx_ks, reference()}, Key :: binary(), Value :: binary()) -> result().
+insert({batch, BRef}, {ks, KsRef}, Key, Value) ->
+    fjall_wb:insert(BRef, KsRef, Key, Value);
+insert({tx, TxRef}, {otx_ks, KsRef}, Key, Value) ->
+    fjall_otx_tx:insert(TxRef, KsRef, Key, Value).
 
-% fjall_otx_tx NIFs
--spec otx_tx_insert(
-    Tx :: fjall_otx_tx:write_tx(), Ks :: fjall_otx_ks:otx_ks(), Key :: binary(), Value :: binary()
-) -> result().
-otx_tx_insert(_Tx, _Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_tx_get(Tx :: fjall_otx_tx:write_tx(), Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) ->
-    result(binary()).
-otx_tx_get(_Tx, _Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_tx_remove(Tx :: fjall_otx_tx:write_tx(), Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) ->
-    result().
-otx_tx_remove(_Tx, _Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_tx_commit(Tx :: fjall_otx_tx:write_tx()) -> result().
-otx_tx_commit(_Tx) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_tx_rollback(Tx :: fjall_otx_tx:write_tx()) -> result().
-otx_tx_rollback(_Tx) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec remove({ks, reference()} | {otx_ks, reference()}, Key :: binary()) -> result().
+remove({ks, Ref}, Key) ->
+    fjall_ks:remove(Ref, Key);
+remove({otx_ks, Ref}, Key) ->
+    fjall_otx_ks:remove(Ref, Key).
 
-% fjall_snapshot NIFs
--spec snapshot_get(
-    Snapshot :: fjall_snapshot:snapshot(), Ks :: fjall_otx_ks:otx_ks(), Key :: binary()
-) -> result(binary()).
-snapshot_get(_Snapshot, _Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec remove
+    ({batch, reference()}, {ks, reference()}, Key :: binary()) -> result();
+    ({tx, reference()}, {otx_ks, reference()}, Key :: binary()) -> result().
+remove({batch, BRef}, {ks, KsRef}, Key) ->
+    fjall_wb:remove(BRef, KsRef, Key);
+remove({tx, TxRef}, {otx_ks, KsRef}, Key) ->
+    fjall_otx_tx:remove(TxRef, KsRef, Key).
 
-% fjall_otx_ks NIFs
--spec otx_ks_insert(Ks :: fjall_otx_ks:otx_ks(), Key :: binary(), Value :: binary()) -> result().
-otx_ks_insert(_Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_get(Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) -> result(binary()).
-otx_ks_get(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_remove(Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) -> result().
-otx_ks_remove(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_take(Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) -> result(binary()).
-otx_ks_take(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_contains_key(Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) -> result(boolean()).
-otx_ks_contains_key(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_size_of(Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) -> result(non_neg_integer()).
-otx_ks_size_of(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_approximate_len(Ks :: fjall_otx_ks:otx_ks()) -> non_neg_integer().
-otx_ks_approximate_len(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_first_key_value(Ks :: fjall_otx_ks:otx_ks()) -> result({binary(), binary()}).
-otx_ks_first_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_last_key_value(Ks :: fjall_otx_ks:otx_ks()) -> result({binary(), binary()}).
-otx_ks_last_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_path(Ks :: fjall_otx_ks:otx_ks()) -> binary().
-otx_ks_path(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec disk_space({ks, reference()}) -> non_neg_integer().
+disk_space({ks, Ref}) ->
+    fjall_ks:disk_space(Ref).
 
-% fjall_iter NIFs
--spec ks_iter(Ks :: fjall_ks:ks(), Options :: [iter_option()]) -> result(fjall_iter:iter()).
-ks_iter(_Ks, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec ks_range(Ks :: fjall_ks:ks(), Start :: binary(), End :: binary(), Options :: [iter_option()]) ->
-    result(fjall_iter:iter()).
-ks_range(_Ks, _Start, _End, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec ks_prefix(Ks :: fjall_ks:ks(), Prefix :: binary(), Options :: [iter_option()]) ->
-    result(fjall_iter:iter()).
-ks_prefix(_Ks, _Prefix, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec iter({ks, reference()} | {otx_ks, reference()}) -> result({iter, reference()}).
+iter({ks, Ref}) ->
+    wrap_iter(fjall_ks:iter(Ref));
+iter({otx_ks, Ref}) ->
+    wrap_iter(fjall_otx_ks:iter(Ref)).
 
--spec otx_ks_iter(Ks :: fjall_otx_ks:otx_ks(), Options :: [iter_option()]) ->
-    result(fjall_iter:iter()).
-otx_ks_iter(_Ks, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_range(
-    Ks :: fjall_otx_ks:otx_ks(), Start :: binary(), End :: binary(), Options :: [iter_option()]
+-spec iter({ks, reference()} | {otx_ks, reference()}, Opts :: [iter_option()]) ->
+    result({iter, reference()}).
+iter({ks, Ref}, Opts) ->
+    wrap_iter(fjall_ks:iter(Ref, Opts));
+iter({otx_ks, Ref}, Opts) ->
+    wrap_iter(fjall_otx_ks:iter(Ref, Opts)).
+
+-spec range({ks, reference()} | {otx_ks, reference()}, Start :: binary(), End :: binary()) ->
+    result({iter, reference()}).
+range({ks, Ref}, Start, End) ->
+    wrap_iter(fjall_ks:range(Ref, Start, End));
+range({otx_ks, Ref}, Start, End) ->
+    wrap_iter(fjall_otx_ks:range(Ref, Start, End)).
+
+-spec range(
+    {ks, reference()} | {otx_ks, reference()},
+    Start :: binary(),
+    End :: binary(),
+    Opts :: [iter_option()]
+) -> result({iter, reference()}).
+range({ks, Ref}, Start, End, Opts) ->
+    wrap_iter(fjall_ks:range(Ref, Start, End, Opts));
+range({otx_ks, Ref}, Start, End, Opts) ->
+    wrap_iter(fjall_otx_ks:range(Ref, Start, End, Opts)).
+
+-spec prefix({ks, reference()} | {otx_ks, reference()}, Prefix :: binary()) ->
+    result({iter, reference()}).
+prefix({ks, Ref}, Prefix) ->
+    wrap_iter(fjall_ks:prefix(Ref, Prefix));
+prefix({otx_ks, Ref}, Prefix) ->
+    wrap_iter(fjall_otx_ks:prefix(Ref, Prefix)).
+
+-spec prefix(
+    {ks, reference()} | {otx_ks, reference()}, Prefix :: binary(), Opts :: [iter_option()]
 ) ->
-    result(fjall_iter:iter()).
-otx_ks_range(_Ks, _Start, _End, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_prefix(Ks :: fjall_otx_ks:otx_ks(), Prefix :: binary(), Options :: [iter_option()]) ->
-    result(fjall_iter:iter()).
-otx_ks_prefix(_Ks, _Prefix, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+    result({iter, reference()}).
+prefix({ks, Ref}, Prefix, Opts) ->
+    wrap_iter(fjall_ks:prefix(Ref, Prefix, Opts));
+prefix({otx_ks, Ref}, Prefix, Opts) ->
+    wrap_iter(fjall_otx_ks:prefix(Ref, Prefix, Opts)).
 
--spec iter_next(Iter :: fjall_iter:iter()) -> {ok, {binary(), binary()}} | done | {error, term()}.
-iter_next(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec iter_collect(Iter :: fjall_iter:iter()) -> {ok, [{binary(), binary()}]} | {error, term()}.
-iter_collect(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec iter_collect(Iter :: fjall_iter:iter(), Limit :: non_neg_integer()) ->
-    {ok, [{binary(), binary()}]} | {error, term()}.
-iter_collect(_Iter, _Limit) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+%%--------------------------------------------------------------------------
+%% Batch/Transaction
+%%--------------------------------------------------------------------------
 
--spec iter_destroy(Iter :: fjall_iter:iter()) -> ok.
-iter_destroy(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec commit({batch, reference()} | {tx, reference()}) -> result().
+commit({batch, Ref}) ->
+    fjall_wb:commit(Ref);
+commit({tx, Ref}) ->
+    fjall_otx_tx:commit(Ref).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% NIF loader                                                             %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-spec commit({batch, reference()}, Mode :: persist_mode()) -> result().
+commit({batch, Ref}, Mode) ->
+    fjall_wb:commit(Ref, Mode).
 
-load() ->
-    SoName =
-        case code:priv_dir(?MODULE) of
-            {error, bad_name} ->
-                case filelib:is_dir(filename:join(["..", priv])) of
-                    true ->
-                        filename:join(["..", priv, "libfjall-native"]);
-                    _ ->
-                        filename:join([priv, "libfjall-native"])
-                end;
-            Dir ->
-                filename:join(Dir, "libfjall-native")
-        end,
-    erlang:load_nif(SoName, 0).
+-spec len({batch, reference()}) -> non_neg_integer().
+len({batch, Ref}) ->
+    fjall_wb:len(Ref).
+
+-spec is_empty({batch, reference()}) -> boolean().
+is_empty({batch, Ref}) ->
+    fjall_wb:is_empty(Ref).
+
+-spec rollback({tx, reference()}) -> result().
+rollback({tx, Ref}) ->
+    fjall_otx_tx:rollback(Ref).
+
+%%--------------------------------------------------------------------------
+%% Keyspace Info
+%%--------------------------------------------------------------------------
+
+-spec take
+    ({otx_ks, reference()}, Key :: binary()) -> result(binary());
+    ({iter, reference()}, N :: pos_integer()) -> {ok, [{binary(), binary()}]} | {error, term()}.
+take({otx_ks, Ref}, Key) ->
+    fjall_otx_ks:take(Ref, Key);
+take({iter, Ref}, N) ->
+    fjall_iter:take(Ref, N).
+
+-spec contains_key({otx_ks, reference()}, Key :: binary()) -> result(boolean()).
+contains_key({otx_ks, Ref}, Key) ->
+    fjall_otx_ks:contains_key(Ref, Key).
+
+-spec size_of({otx_ks, reference()}, Key :: binary()) -> result(non_neg_integer()).
+size_of({otx_ks, Ref}, Key) ->
+    fjall_otx_ks:size_of(Ref, Key).
+
+-spec approximate_len({otx_ks, reference()}) -> non_neg_integer().
+approximate_len({otx_ks, Ref}) ->
+    fjall_otx_ks:approximate_len(Ref).
+
+-spec first_key_value({otx_ks, reference()}) -> result({binary(), binary()}).
+first_key_value({otx_ks, Ref}) ->
+    fjall_otx_ks:first_key_value(Ref).
+
+-spec last_key_value({otx_ks, reference()}) -> result({binary(), binary()}).
+last_key_value({otx_ks, Ref}) ->
+    fjall_otx_ks:last_key_value(Ref).
+
+-spec path({otx_ks, reference()}) -> binary().
+path({otx_ks, Ref}) ->
+    fjall_otx_ks:path(Ref).
+
+%%--------------------------------------------------------------------------
+%% Iterators
+%%--------------------------------------------------------------------------
+
+-spec next({iter, reference()}) -> {ok, {binary(), binary()}} | done | {error, term()}.
+next({iter, Ref}) ->
+    fjall_iter:next(Ref).
+
+-spec collect({iter, reference()}) -> {ok, [{binary(), binary()}]} | {error, term()}.
+collect({iter, Ref}) ->
+    fjall_iter:collect(Ref).
+
+-spec destroy({iter, reference()}) -> ok.
+destroy({iter, Ref}) ->
+    fjall_iter:destroy(Ref).
+
+%%--------------------------------------------------------------------------
+%% Helper Functions (private)
+%%--------------------------------------------------------------------------
+
+-spec wrap_ks(result(reference())) -> result({ks, reference()}).
+wrap_ks({ok, Ref}) -> {ok, {ks, Ref}};
+wrap_ks(Err) -> Err.
+
+-spec wrap_iter(result(reference())) -> result({iter, reference()}).
+wrap_iter({ok, Ref}) -> {ok, {iter, Ref}};
+wrap_iter(Err) -> Err.
+
+-spec wrap_otx_db(result(reference())) -> result({otx_db, reference()}).
+wrap_otx_db({ok, Ref}) -> {ok, {otx_db, Ref}};
+wrap_otx_db(Err) -> Err.
+
+-spec wrap_otx_ks(result(reference())) -> result({otx_ks, reference()}).
+wrap_otx_ks({ok, Ref}) -> {ok, {otx_ks, Ref}};
+wrap_otx_ks(Err) -> Err.
+
+-spec wrap_tx(result(reference())) -> result({tx, reference()}).
+wrap_tx({ok, Ref}) -> {ok, {tx, Ref}};
+wrap_tx(Err) -> Err.
+
+-spec wrap_snapshot(result(reference())) -> result({snapshot, reference()}).
+wrap_snapshot({ok, Ref}) -> {ok, {snapshot, Ref}};
+wrap_snapshot(Err) -> Err.
