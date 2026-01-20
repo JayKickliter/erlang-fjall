@@ -3,15 +3,15 @@ use crate::{
     ks::KsRsc,
     otx_ks::OtxKsRsc,
 };
-use rustler::{Encoder, Env, Resource, ResourceArc, Term};
+use rustler::{Binary, Encoder, Env, NewBinary, Resource, ResourceArc, Term};
 use std::sync::Mutex;
 
-mod iter_atom {
+mod atoms {
     rustler::atoms! { done, reverse }
 }
 
 fn is_reverse(options: &[rustler::Atom]) -> bool {
-    options.iter().any(|opt| *opt == iter_atom::reverse())
+    options.iter().any(|opt| *opt == atoms::reverse())
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -23,64 +23,21 @@ enum IterInner {
     Reverse(std::iter::Rev<fjall::Iter>),
 }
 
-impl IterInner {
-    #[allow(clippy::type_complexity)]
-    fn next_item(&mut self) -> Option<Result<(Vec<u8>, Vec<u8>), fjall::Error>> {
-        let guard = match self {
-            IterInner::Forward(it) => it.next(),
-            IterInner::Reverse(it) => it.next(),
-        }?;
-        Some(guard.into_inner().map(|(k, v)| (k.to_vec(), v.to_vec())))
+impl Iterator for IterInner {
+    type Item = fjall::Guard;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            IterInner::Forward(iter) => iter.next(),
+            IterInner::Reverse(iter) => iter.next(),
+        }
     }
 }
 
 pub struct IterRsc(Mutex<Option<IterInner>>);
 
-impl std::panic::RefUnwindSafe for IterRsc {}
-
 #[rustler::resource_impl]
 impl Resource for IterRsc {}
-
-////////////////////////////////////////////////////////////////////////////
-// Iterator Result Encoding                                               //
-////////////////////////////////////////////////////////////////////////////
-
-pub enum IterValue {
-    Item(Vec<u8>, Vec<u8>),
-    Batch(Vec<(Vec<u8>, Vec<u8>)>),
-    Done,
-}
-
-pub struct IterResult(pub Result<IterValue, FjallError>);
-
-impl std::panic::RefUnwindSafe for IterResult {}
-
-impl Encoder for IterResult {
-    fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
-        match &self.0 {
-            Ok(IterValue::Item(k, v)) => {
-                let key = make_binary(env, k);
-                let val = make_binary(env, v);
-                (atom::ok(), (key, val)).encode(env)
-            }
-            Ok(IterValue::Batch(items)) => {
-                let pairs: Vec<_> = items
-                    .iter()
-                    .map(|(k, v)| (make_binary(env, k), make_binary(env, v)))
-                    .collect();
-                (atom::ok(), pairs).encode(env)
-            }
-            Ok(IterValue::Done) => iter_atom::done().encode(env),
-            Err(err) => err.encode(env),
-        }
-    }
-}
-
-fn make_binary<'a>(env: Env<'a>, data: &[u8]) -> rustler::Binary<'a> {
-    let mut bin = rustler::OwnedBinary::new(data.len()).unwrap();
-    bin.as_mut_slice().copy_from_slice(data);
-    bin.release(env)
-}
 
 ////////////////////////////////////////////////////////////////////////////
 // Iterator Creation - Plain Keyspace                                     //
@@ -188,59 +145,52 @@ pub fn otx_ks_prefix(
 ////////////////////////////////////////////////////////////////////////////
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn iter_next(iter: ResourceArc<IterRsc>) -> IterResult {
+pub fn iter_next<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>) -> Term<'a> {
     let mut guard = iter.0.lock().unwrap();
-    let result = match guard.as_mut() {
-        Some(inner) => match inner.next_item() {
-            Some(Ok((k, v))) => Ok(IterValue::Item(k, v)),
-            Some(Err(e)) => Err(FjallError::from(e)),
-            None => {
-                // Iterator exhausted - drop it to release resources
-                *guard = None;
-                Ok(IterValue::Done)
-            }
-        },
-        None => Ok(IterValue::Done),
+    let Some(itr) = guard.as_mut() else {
+        return atoms::done().encode(env);
     };
-    IterResult(result)
+    match itr.next().map(|g| g.into_inner()) {
+        None => {
+            *guard = None;
+            atoms::done().encode(env)
+        }
+        Some(Ok((k, v))) => {
+            let k = make_binary(env, &k);
+            let v = make_binary(env, &v);
+            (atom::ok(), (k, v)).encode(env)
+        }
+        Some(Err(e)) => FjallError::from(e).encode(env),
+    }
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn iter_collect(iter: ResourceArc<IterRsc>, limit: usize) -> IterResult {
+pub fn iter_collect<'a>(
+    env: Env<'a>,
+    iter: ResourceArc<IterRsc>,
+    limit: Option<usize>,
+) -> Term<'a> {
     let mut guard = iter.0.lock().unwrap();
-    let result = match guard.as_mut() {
-        Some(inner) => {
-            let mut items = Vec::new();
-            let max = if limit == 0 { usize::MAX } else { limit };
-            let mut exhausted = false;
-            let mut error: Option<FjallError> = None;
-            for _ in 0..max {
-                match inner.next_item() {
-                    Some(Ok((k, v))) => {
-                        items.push((k, v));
-                    }
-                    Some(Err(e)) => {
-                        error = Some(FjallError::from(e));
-                        break;
-                    }
-                    None => {
-                        exhausted = true;
-                        break;
-                    }
-                }
-            }
-            if let Some(e) = error {
-                return IterResult(Err(e));
-            }
-            // If exhausted, drop the iterator to release resources
-            if exhausted {
-                *guard = None;
-            }
-            Ok(IterValue::Batch(items))
-        }
-        None => Ok(IterValue::Batch(Vec::new())),
+    let Some(itr) = guard.as_mut() else {
+        return (atom::ok(), Vec::<(Binary, Binary)>::new()).encode(env);
     };
-    IterResult(result)
+    let max = limit.filter(|&n| n > 0).unwrap_or(usize::MAX);
+    let mut items: Vec<(Binary<'a>, Binary<'a>)> = Vec::new();
+    for _ in 0..max {
+        match itr.next().map(|g| g.into_inner()) {
+            Some(Ok((k, v))) => {
+                items.push((make_binary(env, &k), make_binary(env, &v)));
+            }
+            Some(Err(e)) => {
+                return FjallError::from(e).encode(env);
+            }
+            None => {
+                *guard = None;
+                break;
+            }
+        }
+    }
+    (atom::ok(), items).encode(env)
 }
 
 #[rustler::nif]
@@ -249,4 +199,14 @@ pub fn iter_destroy(iter: ResourceArc<IterRsc>) -> rustler::Atom {
         *guard = None;
     }
     atom::ok()
+}
+
+////////////////////////////////////////////////////////////////////////////
+// Helpers                                                                //
+////////////////////////////////////////////////////////////////////////////
+
+fn make_binary<'a>(env: Env<'a>, data: &[u8]) -> Binary<'a> {
+    let mut bin = NewBinary::new(env, data.len());
+    bin.as_mut_slice().copy_from_slice(data);
+    bin.into()
 }
