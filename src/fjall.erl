@@ -5,8 +5,9 @@ Fjall embedded key-value database for Erlang.
 
 This module provides a unified API that dispatches on tuple tags.
 
-## Example (Non-Optimistic)
+## Examples
 
+### Non-transactional
 ```erlang
 {ok, Db} = fjall:open("./mydb"),
 {ok, Ks} = fjall:keyspace(Db, <<"default">>),
@@ -15,7 +16,7 @@ ok = fjall:insert(Ks, <<"key">>, <<"value">>),
 ok = fjall:remove(Ks, <<"key">>).
 ```
 
-## Example (Optimistic Transactions)
+### Optimistic Transaction
 
 ```erlang
 {ok, Db} = fjall:open("./mydb", [{optimistic, true}]),
