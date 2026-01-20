@@ -4,7 +4,7 @@ REBAR=rebar3
 
 ci:
 	@echo ">>> Type-check erlang (dialyzer)"
-	$(REBAR) dialyzer
+	$(REBAR) as test dialyzer
 	@echo ">>> Run erlang tests (eunit)"
 	$(REBAR) eunit --cover
 	@echo ">>> Check erlang formatting (erlfmt)"
@@ -31,7 +31,7 @@ test:
 	cargo test
 
 typecheck:
-	$(REBAR) dialyzer
+	$(REBAR) as test dialyzer
 	cargo clippy --release -- -Wclippy::all
 
 doc:

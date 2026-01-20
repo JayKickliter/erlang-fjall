@@ -62,7 +62,7 @@ jobs:
       run: rebar3 eunit
 
     - name: Erlang | Dialyzer
-      run: rebar3 dialyzer
+      run: rebar3 as test dialyzer
 
     - name: Erlang | Fmt
       run: rebar3 fmt --check
