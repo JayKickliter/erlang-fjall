@@ -40,61 +40,53 @@ ok = fjall_otx_tx:commit(Txn).
 
 -on_load(load/0).
 
-% Export NIF functions (will be called by other modules)
+% NIF functions used by other modules.
 -export([
-    % fjall_db NIFs
-    db_open_nif/2,
-    db_keyspace/3,
     db_batch/1,
+    db_keyspace/3,
+    db_open_nif/2,
     db_persist/2,
-    % fjall_ks NIFs
-    ks_get/2,
-    ks_insert/3,
-    ks_remove/2,
-    ks_disk_space/1,
-    % fjall_wb NIFs
-    wb_insert/4,
-    wb_remove/3,
-    wb_commit/1,
-    wb_commit_with_mode/2,
-    wb_len/1,
-    wb_is_empty/1,
-    % fjall_otx_db NIFs
-    otx_db_open_nif/2,
-    otx_db_keyspace/3,
-    otx_db_write_tx/1,
-    otx_db_snapshot/1,
-    otx_db_persist/2,
-    % fjall_otx_tx NIFs
-    otx_tx_insert/4,
-    otx_tx_get/3,
-    otx_tx_remove/3,
-    otx_tx_commit/1,
-    otx_tx_rollback/1,
-    % fjall_snapshot NIFs
-    snapshot_get/3,
-    % fjall_otx_ks NIFs
-    otx_ks_insert/3,
-    otx_ks_get/2,
-    otx_ks_remove/2,
-    otx_ks_take/2,
-    otx_ks_contains_key/2,
-    otx_ks_size_of/2,
-    otx_ks_approximate_len/1,
-    otx_ks_first_key_value/1,
-    otx_ks_last_key_value/1,
-    otx_ks_path/1,
-    % fjall_iter NIFs
-    ks_iter/2,
-    ks_range/4,
-    ks_prefix/3,
-    otx_ks_iter/2,
-    otx_ks_range/4,
-    otx_ks_prefix/3,
-    iter_next/1,
     iter_collect/1,
     iter_collect/2,
-    iter_destroy/1
+    iter_destroy/1,
+    iter_next/1,
+    ks_disk_space/1,
+    ks_get/2,
+    ks_insert/3,
+    ks_iter/2,
+    ks_prefix/3,
+    ks_range/4,
+    ks_remove/2,
+    otx_db_keyspace/3,
+    otx_db_open_nif/2,
+    otx_db_persist/2,
+    otx_db_snapshot/1,
+    otx_db_write_tx/1,
+    otx_ks_approximate_len/1,
+    otx_ks_contains_key/2,
+    otx_ks_first_key_value/1,
+    otx_ks_get/2,
+    otx_ks_insert/3,
+    otx_ks_iter/2,
+    otx_ks_last_key_value/1,
+    otx_ks_path/1,
+    otx_ks_prefix/3,
+    otx_ks_range/4,
+    otx_ks_remove/2,
+    otx_ks_size_of/2,
+    otx_ks_take/2,
+    otx_tx_commit/1,
+    otx_tx_get/3,
+    otx_tx_insert/4,
+    otx_tx_remove/3,
+    otx_tx_rollback/1,
+    snapshot_get/3,
+    wb_commit/1,
+    wb_commit_with_mode/2,
+    wb_insert/4,
+    wb_is_empty/1,
+    wb_len/1,
+    wb_remove/3
 ]).
 
 -export_type([
