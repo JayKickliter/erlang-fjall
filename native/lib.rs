@@ -1,7 +1,12 @@
 mod config;
-mod database;
+mod db;
 mod error;
-mod keyspace;
-mod optimistic_txn;
+mod iter;
+mod ks;
+mod otx_db;
+mod otx_ks;
+mod otx_tx;
+mod snapshot;
+mod wb;
 
-rustler::init!("fjall");
+rustler::init!("fjall_nif");

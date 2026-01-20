@@ -3,91 +3,90 @@
 -moduledoc """
 Fjall embedded key-value database for Erlang.
 
-This module provides a simple interface to the Fjall LSM-tree based
-key-value database. All keys and values are binaries.
+This module provides shared types and configuration options used across
+the Fjall database modules.
 
-## Example
+## Modules
 
+- `fjall_db` - Plain non-transactional database operations
+- `fjall_ks` - Plain non-transactional keyspace operations
+- `fjall_wb` - Write batch operations
+- `fjall_otx_db` - Optimistic transactional database operations
+- `fjall_otx_ks` - Optimistic transactional keyspace operations
+- `fjall_otx_tx` - Write transaction operations
+- `fjall_snapshot` - Read snapshot operations
+
+## Example (Non-Transactional)
+
+```erlang
+{ok, Database} = fjall_db:open("./mydb"),
+{ok, Keyspace} = fjall_db:keyspace(Database, <<"default">>),
+ok = fjall_ks:insert(Keyspace, <<"key">>, <<"value">>),
+{ok, <<"value">>} = fjall_ks:get(Keyspace, <<"key">>),
+ok = fjall_ks:remove(Keyspace, <<"key">>).
 ```
-{ok, Database} = fjall:open("./mydb"),
-{ok, Keyspace} = fjall:open_keyspace(Database, <<"default">>),
-ok = fjall:insert(Keyspace, <<"key">>, <<"value">>),
-{ok, <<"value">>} = fjall:get(Keyspace, <<"key">>),
-ok = fjall:remove(Keyspace, <<"key">>).
+
+## Example (Transactional)
+
+```erlang
+{ok, Database} = fjall_otx_db:open("./txn_db"),
+{ok, Keyspace} = fjall_otx_db:keyspace(Database, <<"default">>),
+{ok, Txn} = fjall_otx_db:write_tx(Database),
+ok = fjall_otx_tx:insert(Txn, Keyspace, <<"key">>, <<"value">>),
+{ok, <<"value">>} = fjall_otx_tx:get(Txn, Keyspace, <<"key">>),
+ok = fjall_otx_tx:commit(Txn).
 ```
-
-## Databases and Keyspaces
-
-A database is a root instance with its own data and
-configuration. Within a database, you can create multiple keyspaces,
-which are logical separations of key-value data. Each keyspace
-maintains its own index and operations are independent.
-
-## Configuration Options
-
-When opening a database, you can pass configuration options to control
-behavior like cache size, worker thread counts, and journaling
-settings. See `config_option/0` for available options.
 """.
-
--on_load(load/0).
-
--export([
-    open/1,
-    open/2,
-    open_keyspace/2,
-    insert/3,
-    get/2,
-    remove/2,
-    persist/2,
-    open_txn/1,
-    open_txn/2,
-    open_txn_keyspace/2,
-    begin_write_txn/1,
-    begin_read_txn/1,
-    txn_insert/4,
-    txn_get/3,
-    txn_remove/3,
-    read_txn_get/3,
-    commit_txn/1,
-    rollback_txn/1
-]).
 
 -export_type([
     compression/0,
     config_option/0,
-    database/0,
-    keyspace/0,
+    iter_option/0,
+    ks_option/0,
     persist_mode/0,
-    read_txn/0,
     result/0,
-    result/1,
-    txn_database/0,
-    txn_keyspace/0,
-    write_txn/0
+    result/1
 ]).
 
--doc """
-Opaque handle to a Fjall database instance.
+%% Flattened API - dispatch on tuple tags
+-export([
+    %% Database
+    open/1, open/2,
+    keyspace/2, keyspace/3,
+    batch/1,
+    write_tx/1,
+    snapshot/1,
+    persist/2,
 
-Databases are root instances that can contain multiple keyspaces. Use
-`open/1` or `open/2` to create or open a database.
+    %% Key-value operations
+    get/2, get/3,
+    insert/3, insert/4,
+    remove/2, remove/3,
 
-See [Database](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html)
-in the Rust documentation.
-""".
--opaque database() :: reference().
+    %% Batch/transaction
+    commit/1, commit/2,
+    rollback/1,
+    len/1,
+    is_empty/1,
 
--doc """
-Opaque handle to a keyspace within a database.
+    %% Keyspace info
+    take/2,
+    contains_key/2,
+    size_of/2,
+    disk_space/1,
+    approximate_len/1,
+    first_key_value/1,
+    last_key_value/1,
+    path/1,
 
-Keyspaces are logical separations of data within a database.
-Use `open_keyspace/2` to open a keyspace for key-value operations.
-
-See [Keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html)
-in the Rust documentation.
-""".
--opaque keyspace() :: reference().
+    %% Iterators
+    iter/1, iter/2,
+    range/3, range/4,
+    prefix/2, prefix/3,
+    next/1,
+    collect/1,
+    destroy/1
+]).
 
 -doc """
 Compression type for journal entries.
@@ -134,6 +133,37 @@ in the Rust documentation for configuration methods.
     | {worker_threads, pos_integer()}.
 
 -doc """
+Iterator option.
+
+Supported options:
+
+- `reverse` - Iterate in reverse order (from last to first)
+""".
+-type iter_option() :: reverse.
+
+-doc """
+Keyspace configuration option.
+
+Supported options:
+
+- `{manual_journal_persist, boolean()}` - If `true`, journal
+  persistence is manual and must be triggered explicitly.
+  Default: `false`
+- `{max_memtable_size, pos_integer()}` - Maximum in-memory buffer
+  size in bytes. Recommended range: 8-64 MiB. Default: 64 MiB
+- `{expect_point_read_hits, boolean()}` - If `true`, disables
+  last-level bloom filters for ~90% size reduction. Use when
+  point reads typically succeed. Default: `false`
+
+See [KeyspaceCreateOptions](https://docs.rs/fjall/latest/fjall/struct.KeyspaceCreateOptions.html)
+in the Rust documentation.
+""".
+-type ks_option() ::
+    {manual_journal_persist, boolean()}
+    | {max_memtable_size, pos_integer()}
+    | {expect_point_read_hits, boolean()}.
+
+-doc """
 Persist mode for database persistence.
 
 Determines the durability guarantee when persisting a database:
@@ -166,567 +196,263 @@ Result type for operations that return a value on success.
 """.
 -type result(T) :: {ok, T} | {error, Reason :: term()}.
 
--doc """
-Opaque handle to a transactional database instance.
+%%--------------------------------------------------------------------------
+%% Database
+%%--------------------------------------------------------------------------
 
-Transactional databases support ACID transactions for atomic
-multi-keyspace updates and snapshot-isolated reads.
-Use `open_txn/1` or `open_txn/2` to create a transactional database.
-
-See [OptimisticTxDatabase](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html)
-in the Rust documentation.
-""".
--opaque txn_database() :: reference().
-
--doc """
-Opaque handle to a keyspace in a transactional database.
-
-Used for operations within transactions. Accessed via
-`open_txn_keyspace/2`.
-
-See [Keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html)
-in the Rust documentation.
-""".
--opaque txn_keyspace() :: reference().
-
--doc """
-Opaque handle to a write transaction.
-
-Provides single-writer serialized transactions with read-your-own-writes
-semantics. Created with `begin_write_txn/1`, must be committed with
-`commit_txn/1` or rolled back with `rollback_txn/1`.
-
-See [OptimisticWriteTx](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html)
-in the Rust documentation.
-""".
--opaque write_txn() :: reference().
-
--doc """
-Opaque handle to a read transaction (snapshot).
-
-Provides snapshot isolation with repeatable read semantics. Created
-with `begin_read_txn/1`. Read-only, no explicit commit/rollback needed.
-
-See [Snapshot](https://docs.rs/fjall/3.0.1/fjall/struct.Snapshot.html)
-in the Rust documentation.
-""".
--opaque read_txn() :: reference().
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Public API                                                             %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
--doc """
-Opens a database at the given path with default configuration options.
-
-The path can be a string, binary, or atom representing a file system
-path. If the database already exists at the given path, it will be
-opened. Otherwise, a new database will be created.
-
-Returns `{ok, Database}` on success or `{error, Reason}` on failure.
-
-## Errors
-
-Common errors include:
-
-- Permission denied - insufficient permissions to access the path
-- Invalid path - path contains invalid UTF-8 sequences
-- Disk error - I/O error when accessing the file system
-
-## Example
-
-```erlang
-{ok, Database} = fjall:open("/var/lib/mydb")
-```
-
-See [Database::open](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.open)
-in the Rust documentation.
-""".
--spec open(Path :: file:name_all()) -> result(database()).
+-spec open(Path :: file:name_all()) -> result({db, reference()} | {otx_db, reference()}).
 open(Path) ->
     open(Path, []).
 
--doc """
-Opens a database at the given path with custom configuration options.
-
-Configuration options allow fine-tuning of Fjall's behavior for
-specific workloads. Options are provided as a list of tuples. Unknown
-options will result in an error.
-
-Returns `{ok, Database}` on success or `{error, Reason}` on failure.
-
-## Example
-
-```erlang
-Options = [
-    {cache_size, 512 * 1024 * 1024},  % 512MB cache
-    {worker_threads, 4}  % 4 worker threads
-],
-{ok, Database} = fjall:open("/var/lib/mydb", Options)
-```
-
-## See Also
-
-- `t:config_option/0` for available configuration options
-- [Database::open](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.open)
-  in the Rust documentation
-""".
--spec open(Path :: file:name_all(), Options :: [config_option()]) ->
-    result(database()).
+-spec open(Path :: file:name_all(), Options :: [config_option() | {optimistic, boolean()}]) ->
+    result({db, reference()} | {otx_db, reference()}).
 open(Path, Options) ->
-    PathBinary = path_to_binary(Path),
-    open_nif(PathBinary, Options).
-
--spec open_nif(Path :: binary(), Options :: [config_option()]) ->
-    result(database()).
-open_nif(_Path, _Options) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Opens or creates a keyspace within a database.
-
-Keyspaces provide logical separation of data within a single database.
-If a keyspace with the given name already exists, it is opened.
-Otherwise, a new keyspace is created.
-
-The keyspace name must be a binary. Keyspace names are persistent and
-will be recovered when the database is reopened.
-
-Returns `{ok, Keyspace}` on success or `{error, Reason}` on failure.
-
-## Errors
-
-- `{error, disk_error}` - I/O error when accessing keyspace data
-- `{error, corrupted}` - Keyspace data is corrupted
-
-## Example
-
-```erlang
-{ok, Database} = fjall:open("./db"),
-{ok, Keyspace} = fjall:open_keyspace(Database, <<"users">>)
-```
-
-See [Database::keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.keyspace)
-in the Rust documentation.
-""".
--spec open_keyspace(Database :: database(), Name :: binary()) ->
-    result(keyspace()).
-open_keyspace(_Database, _Name) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Inserts or updates a key-value pair in the keyspace.
-
-If the key already exists, its value is overwritten. Both keys and
-values must be binaries.
-
-Returns `ok` on success or `{error, Reason}` on failure.
-
-## Errors
-
-- `{error, disk_error}` - I/O error when writing to disk
-- `{error, out_of_memory}` - Insufficient memory to buffer the write
-
-## Example
-
-```erlang
-ok = fjall:insert(Keyspace, <<"alice">>, <<"alice@example.com">>)
-```
-
-See [Keyspace::insert](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.insert)
-in the Rust documentation.
-""".
--spec insert(Keyspace :: keyspace(), Key :: binary(), Value :: binary()) ->
-    result().
-insert(_Keyspace, _Key, _Value) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Retrieves the value associated with a key from the keyspace.
-
-Returns `{ok, Value}` if the key exists, or `{error, not_found}` if
-the key does not exist. Returns `{error, Reason}` on other errors.
-
-## Errors
-
-- `{error, not_found}` - Key does not exist in the keyspace
-- `{error, disk_error}` - I/O error when reading from disk
-
-## Example
-
-```erlang
-case fjall:get(Keyspace, <<"alice">>) of
-    {ok, Email} ->
-        io:format("Alice's email: ~s~n", [Email]);
-    {error, not_found} ->
-        io:format("Alice not found~n");
-    {error, Reason} ->
-        io:format("Error: ~p~n", [Reason])
-end
-```
-
-See [Keyspace::get](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.get)
-in the Rust documentation.
-""".
--spec get(Keyspace :: keyspace(), Key :: binary()) -> result(binary()).
-get(_Keyspace, _Key) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Removes a key-value pair from the keyspace.
-
-If the key does not exist, this is a no-op and still returns `ok`.
-
-Returns `ok` on success or `{error, Reason}` on failure.
-
-## Errors
-
-- `{error, disk_error}` - I/O error when writing to disk
-
-## Example
-
-```erlang
-ok = fjall:remove(Keyspace, <<"alice">>)
-```
-
-See [Keyspace::remove](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.remove)
-in the Rust documentation.
-""".
--spec remove(Keyspace :: keyspace(), Key :: binary()) -> result().
-remove(_Keyspace, _Key) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Persists the database to disk with the specified durability mode.
-
-This function flushes all in-memory data and journals to storage
-according to the specified persist mode. It is useful when you want
-to ensure all writes are durable, especially when using
-`{manual_journal_persist, true}` configuration.
-
-The persist mode controls the durability guarantee:
-
-- `buffer` - Fastest, least durable. Suitable for data that can be
-  reconstructed after an application crash.
-- `sync_data` - Good balance of performance and durability.
-  Recommended for most applications.
-- `sync_all` - Slowest, most durable. Ensures both data and metadata
-  are written to disk. Recommended for critical data.
-
-Returns `ok` on success or `{error, Reason}` on failure.
-
-## Errors
-
-- `{error, disk_error}` - I/O error when writing to disk
-
-## Example
-
-```erlang
-{ok, Database} = fjall:open("./db"),
-ok = fjall:insert(Keyspace, <<"key">>, <<"value">>),
-ok = fjall:persist(Database, sync_all)
-```
-
-See [Database::persist](https://docs.rs/fjall/3.0.1/fjall/struct.Database.html#method.persist)
-in the Rust documentation.
-""".
--spec persist(Database :: database(), Mode :: persist_mode()) -> result().
-persist(_Database, _Mode) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Transactional API                                                      %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
--doc """
-Opens a transactional database at the given path with default
-configuration.
-
-Returns a transactional database that supports ACID transactions for
-atomic multi-keyspace writes and snapshot-isolated reads.
-
-See `open/1` for path handling and error information.
-
-See [OptimisticTxDatabase::open](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.open)
-in the Rust documentation.
-""".
--spec open_txn(Path :: file:name_all()) -> result(txn_database()).
-open_txn(Path) ->
-    open_txn(Path, []).
-
--doc """
-Opens a transactional database with configuration options.
-
-Accepts the same configuration options as `open/2`. The transactional
-database can be used for both transactional and non-transactional
-keyspace operations.
-
-See [OptimisticTxDatabase::open](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.open)
-in the Rust documentation.
-""".
--spec open_txn(Path :: file:name_all(), Options :: [config_option()]) ->
-    result(txn_database()).
-open_txn(Path, Options) ->
-    PathBinary = path_to_binary(Path),
-    open_txn_nif(PathBinary, Options).
-
--spec open_txn_nif(Path :: binary(), Options :: [config_option()]) ->
-    result(txn_database()).
-open_txn_nif(_Path, _Options) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Opens or creates a keyspace in a transactional database.
-
-Returns a keyspace handle for use in transactions. Like
-`open_keyspace/2` but for use with transactional databases.
-
-See [OptimisticTxDatabase::keyspace](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.keyspace)
-in the Rust documentation.
-""".
--spec open_txn_keyspace(Database :: txn_database(), Name :: binary()) ->
-    result(txn_keyspace()).
-open_txn_keyspace(_Database, _Name) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Begins a write transaction on the database.
-
-Returns a transaction handle that can be used for atomic multi-keyspace
-writes. The transaction must be explicitly committed with `commit_txn/1`
-or rolled back with `rollback_txn/1`. If neither is called, automatic
-rollback occurs when the transaction is garbage collected.
-
-## Optimistic Concurrency Control
-
-Transactions use optimistic concurrency control. Multiple transactions
-can run concurrently, but conflicts are detected at commit time. If a
-key read by this transaction was modified by another committed
-transaction, `commit_txn/1` returns `{error, transaction_conflict}`.
-
-## Semantics
-
-Write transactions provide:
-
-- **Read-your-own-writes (RYOW)**: Reads within the transaction see
-  uncommitted writes by the same transaction.
-- **Atomicity**: All writes commit or none do.
-- **Cross-keyspace atomicity**: Can update multiple keyspaces
-  atomically.
-- **Optimistic locking**: Conflicts detected at commit time, not
-  during reads/writes.
-
-## Example
-
-```erlang
-{ok, Txn} = fjall:begin_write_txn(Database),
-ok = fjall:txn_insert(Txn, Keyspace1, <<"key1">>, <<"value1">>),
-ok = fjall:txn_insert(Txn, Keyspace2, <<"key2">>, <<"value2">>),
-ok = fjall:commit_txn(Txn)  % Both inserts are now atomic
-```
-
-See [OptimisticTxDatabase::write_tx](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.write_tx)
-in the Rust documentation.
-""".
--spec begin_write_txn(Database :: txn_database()) -> result(write_txn()).
-begin_write_txn(_Database) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Begins a read transaction (snapshot) on the database.
-
-Returns a read-only transaction handle that sees a consistent
-point-in-time view of the data. Multiple read transactions can run
-concurrently.
-
-## Semantics
-
-Read transactions provide:
-
-- **Snapshot isolation**: The transaction sees a consistent
-  point-in-time view that remains unchanged for the lifetime of the
-  transaction.
-- **Repeatable reads**: Reading the same key multiple times returns
-  the same value.
-- **No dirty reads**: Only sees committed data.
-- **Read-only**: No modifications allowed.
-
-## Example
-
-```erlang
-{ok, ReadTxn} = fjall:begin_read_txn(Database),
-{ok, Value1} = fjall:read_txn_get(ReadTxn, Keyspace, <<"key1">>),
-% Even if another write happens now:
-% {ok, Value2} = fjall:read_txn_get(ReadTxn, Keyspace, <<"key2">>)
-% ReadTxn still sees its original snapshot
-```
-
-See [OptimisticTxDatabase::read_tx](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxDatabase.html#method.read_tx)
-in the Rust documentation.
-""".
--spec begin_read_txn(Database :: txn_database()) -> result(read_txn()).
-begin_read_txn(_Database) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Inserts or updates a key-value pair within a write transaction.
-
-If the key already exists, its value is updated. The write is visible
-to subsequent reads within the same transaction (read-your-own-writes).
-
-Returns `ok` on success or `{error, Reason}` on failure. The
-transaction is not automatically rolled back on error; the caller
-must decide whether to commit or rollback.
-
-See [OptimisticWriteTx::insert](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html#method.insert)
-in the Rust documentation.
-""".
--spec txn_insert(
-    Txn :: write_txn(),
-    Keyspace :: txn_keyspace(),
-    Key :: binary(),
-    Value :: binary()
-) -> result().
-txn_insert(_Txn, _Keyspace, _Key, _Value) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Retrieves a value from a write transaction.
-
-Returns the value if it exists (including writes made earlier in the
-same transaction). Returns `{error, not_found}` if the key doesn't
-exist.
-
-## Read-Your-Own-Writes
-
-If the key was inserted or updated earlier in the same transaction,
-this returns that value. Otherwise, it returns the value from the
-database at transaction start time.
-
-See [OptimisticWriteTx::get](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html#method.get)
-in the Rust documentation.
-""".
--spec txn_get(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
-    result(binary()).
-txn_get(_Txn, _Keyspace, _Key) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Removes a key from a write transaction.
-
-If the key doesn't exist, this is a no-op and returns `ok`. The
-removal is visible to subsequent reads in the same transaction.
-
-See [OptimisticWriteTx::remove](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html#method.remove)
-in the Rust documentation.
-""".
--spec txn_remove(Txn :: write_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
-    result().
-txn_remove(_Txn, _Keyspace, _Key) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Retrieves a value from a read transaction (snapshot).
-
-Returns the value if it exists in the snapshot, or `{error, not_found}`
-if it doesn't. All reads in the same read transaction see the same
-snapshot, regardless of concurrent writes.
-
-See [Snapshot::get](https://docs.rs/fjall/3.0.1/fjall/struct.Snapshot.html#method.get)
-in the Rust documentation.
-""".
--spec read_txn_get(Txn :: read_txn(), Keyspace :: txn_keyspace(), Key :: binary()) ->
-    result(binary()).
-read_txn_get(_Txn, _Keyspace, _Key) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Commits a write transaction, making all changes durable.
-
-Atomically applies all changes made in the transaction. On success,
-returns `ok`. On failure, returns an error and the transaction is
-rolled back.
-
-After commit, the transaction handle is invalid and cannot be used
-for further operations (will return
-`{error, transaction_already_finalized}`).
-
-## Errors
-
-- `{error, transaction_conflict}` - A concurrent transaction modified
-  a key that was read by this transaction. The transaction is rolled
-  back; retry the operation if appropriate.
-- `{error, transaction_already_finalized}` - The transaction was
-  already committed or rolled back.
-- `{error, Reason}` - I/O error when writing to disk.
-
-## Atomicity Guarantee
-
-Either all writes in the transaction are applied, or none are. There
-is no middle ground.
-
-See [OptimisticWriteTx::commit](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html#method.commit)
-in the Rust documentation.
-""".
--spec commit_txn(Txn :: write_txn()) -> result().
-commit_txn(_Txn) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--doc """
-Rolls back a write transaction, discarding all changes.
-
-After rollback, the transaction handle is invalid and cannot be used
-for further operations.
-
-## Note
-
-Rollback is optional. If a transaction is dropped without being
-committed or explicitly rolled back, automatic rollback occurs.
-
-See [OptimisticWriteTx::rollback](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html#method.rollback)
-in the Rust documentation.
-""".
--spec rollback_txn(Txn :: write_txn()) -> result().
-rollback_txn(_Txn) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Private Helper Functions                                               %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
--spec path_to_binary(Path :: file:name_all()) -> binary().
-path_to_binary(Path) when is_binary(Path) ->
-    Path;
-path_to_binary(Path) when is_list(Path) ->
-    case file:native_name_encoding() of
-        utf8 ->
-            unicode:characters_to_binary(Path, unicode, utf8);
-        latin1 ->
-            unicode:characters_to_binary(Path, latin1, utf8)
-    end;
-path_to_binary(Path) when is_atom(Path) ->
-    atom_to_binary(Path, utf8).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% NIF loader                                                             %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-load() ->
-    SoName =
-        case code:priv_dir(?MODULE) of
-            {error, bad_name} ->
-                case filelib:is_dir(filename:join(["..", priv])) of
-                    true ->
-                        filename:join(["..", priv, "libfjall-native"]);
-                    _ ->
-                        filename:join([priv, "libfjall-native"])
-                end;
-            Dir ->
-                filename:join(Dir, "libfjall-native")
-        end,
-    case erlang:load_nif(SoName, 0) of
-        ok ->
-            ok;
-        {error, Reason} ->
-            {error, Reason}
+    case proplists:get_value(optimistic, Options, false) of
+        true ->
+            OptsWithoutTx = proplists:delete(optimistic, Options),
+            wrap_otx_db(fjall_otx_db:open(Path, OptsWithoutTx));
+        false ->
+            case fjall_db:open(Path, Options) of
+                {ok, Ref} -> {ok, {db, Ref}};
+                Err -> Err
+            end
     end.
+
+-spec batch({db, reference()}) -> result({batch, reference()}).
+batch({db, Ref}) ->
+    case fjall_db:batch(Ref) of
+        {ok, BatchRef} -> {ok, {batch, BatchRef}};
+        Err -> Err
+    end.
+
+-spec persist({db, reference()}, Mode :: persist_mode()) -> result().
+persist({db, Ref}, Mode) ->
+    fjall_db:persist(Ref, Mode);
+persist({otx_db, Ref}, Mode) ->
+    fjall_otx_db:persist(Ref, Mode).
+
+-spec keyspace({db, reference()} | {otx_db, reference()}, Name :: binary()) ->
+    result({ks, reference()} | {otx_ks, reference()}).
+keyspace({db, Ref}, Name) ->
+    wrap_ks(fjall_db:keyspace(Ref, Name));
+keyspace({otx_db, Ref}, Name) ->
+    wrap_otx_ks(fjall_otx_db:keyspace(Ref, Name)).
+
+-spec keyspace({db, reference()} | {otx_db, reference()}, Name :: binary(), Opts :: [ks_option()]) ->
+    result({ks, reference()} | {otx_ks, reference()}).
+keyspace({db, Ref}, Name, Opts) ->
+    wrap_ks(fjall_db:keyspace(Ref, Name, Opts));
+keyspace({otx_db, Ref}, Name, Opts) ->
+    wrap_otx_ks(fjall_otx_db:keyspace(Ref, Name, Opts)).
+
+-spec write_tx({otx_db, reference()}) -> result({tx, reference()}).
+write_tx({otx_db, Ref}) ->
+    wrap_tx(fjall_otx_db:write_tx(Ref)).
+
+-spec snapshot({otx_db, reference()}) -> result({snapshot, reference()}).
+snapshot({otx_db, Ref}) ->
+    wrap_snapshot(fjall_otx_db:snapshot(Ref)).
+
+%%--------------------------------------------------------------------------
+%% Key-Value Operations
+%%--------------------------------------------------------------------------
+
+-spec get({ks, reference()} | {otx_ks, reference()}, Key :: binary()) -> result(binary()).
+get({ks, Ref}, Key) ->
+    fjall_ks:get(Ref, Key);
+get({otx_ks, Ref}, Key) ->
+    fjall_otx_ks:get(Ref, Key).
+
+-spec get
+    ({tx, reference()}, {otx_ks, reference()}, Key :: binary()) -> result(binary());
+    ({snapshot, reference()}, {otx_ks, reference()}, Key :: binary()) -> result(binary()).
+get({tx, TxRef}, {otx_ks, KsRef}, Key) ->
+    fjall_otx_tx:get(TxRef, KsRef, Key);
+get({snapshot, SnapRef}, {otx_ks, KsRef}, Key) ->
+    fjall_snapshot:get(SnapRef, KsRef, Key).
+
+-spec insert({ks, reference()} | {otx_ks, reference()}, Key :: binary(), Value :: binary()) ->
+    result().
+insert({ks, Ref}, Key, Value) ->
+    fjall_ks:insert(Ref, Key, Value);
+insert({otx_ks, Ref}, Key, Value) ->
+    fjall_otx_ks:insert(Ref, Key, Value).
+
+-spec insert
+    ({batch, reference()}, {ks, reference()}, Key :: binary(), Value :: binary()) -> result();
+    ({tx, reference()}, {otx_ks, reference()}, Key :: binary(), Value :: binary()) -> result().
+insert({batch, BRef}, {ks, KsRef}, Key, Value) ->
+    fjall_wb:insert(BRef, KsRef, Key, Value);
+insert({tx, TxRef}, {otx_ks, KsRef}, Key, Value) ->
+    fjall_otx_tx:insert(TxRef, KsRef, Key, Value).
+
+-spec remove({ks, reference()} | {otx_ks, reference()}, Key :: binary()) -> result().
+remove({ks, Ref}, Key) ->
+    fjall_ks:remove(Ref, Key);
+remove({otx_ks, Ref}, Key) ->
+    fjall_otx_ks:remove(Ref, Key).
+
+-spec remove
+    ({batch, reference()}, {ks, reference()}, Key :: binary()) -> result();
+    ({tx, reference()}, {otx_ks, reference()}, Key :: binary()) -> result().
+remove({batch, BRef}, {ks, KsRef}, Key) ->
+    fjall_wb:remove(BRef, KsRef, Key);
+remove({tx, TxRef}, {otx_ks, KsRef}, Key) ->
+    fjall_otx_tx:remove(TxRef, KsRef, Key).
+
+-spec disk_space({ks, reference()}) -> non_neg_integer().
+disk_space({ks, Ref}) ->
+    fjall_ks:disk_space(Ref).
+
+-spec iter({ks, reference()} | {otx_ks, reference()}) -> result({iter, reference()}).
+iter({ks, Ref}) ->
+    wrap_iter(fjall_ks:iter(Ref));
+iter({otx_ks, Ref}) ->
+    wrap_iter(fjall_otx_ks:iter(Ref)).
+
+-spec iter({ks, reference()} | {otx_ks, reference()}, Opts :: [iter_option()]) ->
+    result({iter, reference()}).
+iter({ks, Ref}, Opts) ->
+    wrap_iter(fjall_ks:iter(Ref, Opts));
+iter({otx_ks, Ref}, Opts) ->
+    wrap_iter(fjall_otx_ks:iter(Ref, Opts)).
+
+-spec range({ks, reference()} | {otx_ks, reference()}, Start :: binary(), End :: binary()) ->
+    result({iter, reference()}).
+range({ks, Ref}, Start, End) ->
+    wrap_iter(fjall_ks:range(Ref, Start, End));
+range({otx_ks, Ref}, Start, End) ->
+    wrap_iter(fjall_otx_ks:range(Ref, Start, End)).
+
+-spec range(
+    {ks, reference()} | {otx_ks, reference()},
+    Start :: binary(),
+    End :: binary(),
+    Opts :: [iter_option()]
+) -> result({iter, reference()}).
+range({ks, Ref}, Start, End, Opts) ->
+    wrap_iter(fjall_ks:range(Ref, Start, End, Opts));
+range({otx_ks, Ref}, Start, End, Opts) ->
+    wrap_iter(fjall_otx_ks:range(Ref, Start, End, Opts)).
+
+-spec prefix({ks, reference()} | {otx_ks, reference()}, Prefix :: binary()) ->
+    result({iter, reference()}).
+prefix({ks, Ref}, Prefix) ->
+    wrap_iter(fjall_ks:prefix(Ref, Prefix));
+prefix({otx_ks, Ref}, Prefix) ->
+    wrap_iter(fjall_otx_ks:prefix(Ref, Prefix)).
+
+-spec prefix(
+    {ks, reference()} | {otx_ks, reference()}, Prefix :: binary(), Opts :: [iter_option()]
+) ->
+    result({iter, reference()}).
+prefix({ks, Ref}, Prefix, Opts) ->
+    wrap_iter(fjall_ks:prefix(Ref, Prefix, Opts));
+prefix({otx_ks, Ref}, Prefix, Opts) ->
+    wrap_iter(fjall_otx_ks:prefix(Ref, Prefix, Opts)).
+
+%%--------------------------------------------------------------------------
+%% Batch/Transaction
+%%--------------------------------------------------------------------------
+
+-spec commit({batch, reference()} | {tx, reference()}) -> result().
+commit({batch, Ref}) ->
+    fjall_wb:commit(Ref);
+commit({tx, Ref}) ->
+    fjall_otx_tx:commit(Ref).
+
+-spec commit({batch, reference()}, Mode :: persist_mode()) -> result().
+commit({batch, Ref}, Mode) ->
+    fjall_wb:commit(Ref, Mode).
+
+-spec len({batch, reference()}) -> non_neg_integer().
+len({batch, Ref}) ->
+    fjall_wb:len(Ref).
+
+-spec is_empty({batch, reference()}) -> boolean().
+is_empty({batch, Ref}) ->
+    fjall_wb:is_empty(Ref).
+
+-spec rollback({tx, reference()}) -> result().
+rollback({tx, Ref}) ->
+    fjall_otx_tx:rollback(Ref).
+
+%%--------------------------------------------------------------------------
+%% Keyspace Info
+%%--------------------------------------------------------------------------
+
+-spec take
+    ({otx_ks, reference()}, Key :: binary()) -> result(binary());
+    ({iter, reference()}, N :: pos_integer()) -> {ok, [{binary(), binary()}]} | {error, term()}.
+take({otx_ks, Ref}, Key) ->
+    fjall_otx_ks:take(Ref, Key);
+take({iter, Ref}, N) ->
+    fjall_iter:take(Ref, N).
+
+-spec contains_key({otx_ks, reference()}, Key :: binary()) -> result(boolean()).
+contains_key({otx_ks, Ref}, Key) ->
+    fjall_otx_ks:contains_key(Ref, Key).
+
+-spec size_of({otx_ks, reference()}, Key :: binary()) -> result(non_neg_integer()).
+size_of({otx_ks, Ref}, Key) ->
+    fjall_otx_ks:size_of(Ref, Key).
+
+-spec approximate_len({otx_ks, reference()}) -> non_neg_integer().
+approximate_len({otx_ks, Ref}) ->
+    fjall_otx_ks:approximate_len(Ref).
+
+-spec first_key_value({otx_ks, reference()}) -> result({binary(), binary()}).
+first_key_value({otx_ks, Ref}) ->
+    fjall_otx_ks:first_key_value(Ref).
+
+-spec last_key_value({otx_ks, reference()}) -> result({binary(), binary()}).
+last_key_value({otx_ks, Ref}) ->
+    fjall_otx_ks:last_key_value(Ref).
+
+-spec path({otx_ks, reference()}) -> binary().
+path({otx_ks, Ref}) ->
+    fjall_otx_ks:path(Ref).
+
+%%--------------------------------------------------------------------------
+%% Iterators
+%%--------------------------------------------------------------------------
+
+-spec next({iter, reference()}) -> {ok, {binary(), binary()}} | done | {error, term()}.
+next({iter, Ref}) ->
+    fjall_iter:next(Ref).
+
+-spec collect({iter, reference()}) -> {ok, [{binary(), binary()}]} | {error, term()}.
+collect({iter, Ref}) ->
+    fjall_iter:collect(Ref).
+
+-spec destroy({iter, reference()}) -> ok.
+destroy({iter, Ref}) ->
+    fjall_iter:destroy(Ref).
+
+%%--------------------------------------------------------------------------
+%% Helper Functions (private)
+%%--------------------------------------------------------------------------
+
+-spec wrap_ks(result(reference())) -> result({ks, reference()}).
+wrap_ks({ok, Ref}) -> {ok, {ks, Ref}};
+wrap_ks(Err) -> Err.
+
+-spec wrap_iter(result(reference())) -> result({iter, reference()}).
+wrap_iter({ok, Ref}) -> {ok, {iter, Ref}};
+wrap_iter(Err) -> Err.
+
+-spec wrap_otx_db(result(reference())) -> result({otx_db, reference()}).
+wrap_otx_db({ok, Ref}) -> {ok, {otx_db, Ref}};
+wrap_otx_db(Err) -> Err.
+
+-spec wrap_otx_ks(result(reference())) -> result({otx_ks, reference()}).
+wrap_otx_ks({ok, Ref}) -> {ok, {otx_ks, Ref}};
+wrap_otx_ks(Err) -> Err.
+
+-spec wrap_tx(result(reference())) -> result({tx, reference()}).
+wrap_tx({ok, Ref}) -> {ok, {tx, Ref}};
+wrap_tx(Err) -> Err.
+
+-spec wrap_snapshot(result(reference())) -> result({snapshot, reference()}).
+wrap_snapshot({ok, Ref}) -> {ok, {snapshot, Ref}};
+wrap_snapshot(Err) -> Err.

@@ -5,11 +5,13 @@ use std::path::Path;
 mod atom {
     rustler::atoms! {
         cache_size,
+        expect_point_read_hits,
         journal_compression,
         lz4,
         manual_journal_persist,
         max_cached_files,
         max_journaling_size,
+        max_memtable_size,
         none,
         temporary,
         worker_threads,
@@ -30,7 +32,7 @@ pub fn decode_path(bin: rustler::Binary) -> Result<String, FjallError> {
 // Configuration Parsing                                                  //
 ////////////////////////////////////////////////////////////////////////////
 
-pub fn parse_builder_options_database(
+pub fn parse_db_options(
     path: &str,
     options: Vec<(rustler::Atom, rustler::Term)>,
 ) -> Result<DatabaseBuilder<fjall::Database>, FjallError> {
@@ -79,7 +81,7 @@ pub fn parse_builder_options_database(
     Ok(builder)
 }
 
-pub fn parse_builder_options_optimistic_tx(
+pub fn parse_otx_db_options(
     path: &str,
     options: Vec<(rustler::Atom, rustler::Term)>,
 ) -> Result<DatabaseBuilder<fjall::OptimisticTxDatabase>, FjallError> {
@@ -126,4 +128,34 @@ pub fn parse_builder_options_optimistic_tx(
     }
 
     Ok(builder)
+}
+
+////////////////////////////////////////////////////////////////////////////
+// Keyspace Configuration Parsing                                         //
+////////////////////////////////////////////////////////////////////////////
+
+pub fn parse_ks_options(
+    options: Vec<(rustler::Atom, rustler::Term)>,
+) -> Result<fjall::KeyspaceCreateOptions, FjallError> {
+    let mut ks_options = fjall::KeyspaceCreateOptions::default();
+
+    for (key, value) in options {
+        if key == atom::manual_journal_persist() {
+            let val: bool = value.decode().map_err(FjallError::from)?;
+            ks_options = ks_options.manual_journal_persist(val);
+        } else if key == atom::max_memtable_size() {
+            let val: u64 = value.decode().map_err(FjallError::from)?;
+            ks_options = ks_options.max_memtable_size(val);
+        } else if key == atom::expect_point_read_hits() {
+            let val: bool = value.decode().map_err(FjallError::from)?;
+            ks_options = ks_options.expect_point_read_hits(val);
+        } else {
+            return Err(FjallError::Config(format!(
+                "Unknown keyspace option: {:?}",
+                key
+            )));
+        }
+    }
+
+    Ok(ks_options)
 }
