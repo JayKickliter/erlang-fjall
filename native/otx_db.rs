@@ -41,12 +41,11 @@ pub fn otx_db_open_nif(
 pub fn otx_db_keyspace(
     db: ResourceArc<OtxDbRsc>,
     name: String,
-    _options: Vec<(rustler::Atom, rustler::Term)>,
+    options: Vec<(rustler::Atom, rustler::Term)>,
 ) -> FjallResult<ResourceArc<OtxKsRsc>> {
     let result = (|| {
-        let ks =
-            db.0.keyspace(&name, fjall::KeyspaceCreateOptions::default)
-                .to_erlang_result()?;
+        let ks_options = crate::config::parse_ks_options(options)?;
+        let ks = db.0.keyspace(&name, || ks_options).to_erlang_result()?;
         Ok(ResourceArc::new(OtxKsRsc(ks)))
     })();
     FjallResult(result)

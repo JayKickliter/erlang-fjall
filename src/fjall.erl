@@ -89,6 +89,7 @@ ok = fjall_otx_tx:commit(Txn).
 -export_type([
     compression/0,
     config_option/0,
+    ks_option/0,
     persist_mode/0,
     result/0,
     result/1
@@ -137,6 +138,28 @@ in the Rust documentation for configuration methods.
     | {max_journaling_size, pos_integer()}
     | {temporary, boolean()}
     | {worker_threads, pos_integer()}.
+
+-doc """
+Keyspace configuration option.
+
+Supported options:
+
+- `{manual_journal_persist, boolean()}` - If `true`, journal
+  persistence is manual and must be triggered explicitly.
+  Default: `false`
+- `{max_memtable_size, pos_integer()}` - Maximum in-memory buffer
+  size in bytes. Recommended range: 8-64 MiB. Default: 64 MiB
+- `{expect_point_read_hits, boolean()}` - If `true`, disables
+  last-level bloom filters for ~90% size reduction. Use when
+  point reads typically succeed. Default: `false`
+
+See [KeyspaceCreateOptions](https://docs.rs/fjall/latest/fjall/struct.KeyspaceCreateOptions.html)
+in the Rust documentation.
+""".
+-type ks_option() ::
+    {manual_journal_persist, boolean()}
+    | {max_memtable_size, pos_integer()}
+    | {expect_point_read_hits, boolean()}.
 
 -doc """
 Persist mode for database persistence.

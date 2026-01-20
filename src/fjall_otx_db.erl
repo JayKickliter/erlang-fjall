@@ -17,7 +17,7 @@ in the Rust documentation.
     persist/2
 ]).
 
--export_type([otx_db/0, ks_option/0]).
+-export_type([otx_db/0]).
 
 -doc """
 Opaque handle to an optimistic transactional database instance.
@@ -26,13 +26,6 @@ Transactional databases support ACID transactions for atomic
 multi-keyspace updates and snapshot-isolated reads.
 """.
 -nominal otx_db() :: reference().
-
--doc """
-Keyspace configuration option.
-
-Currently, only default options are supported.
-""".
--type ks_option() :: term().
 
 -doc """
 Opens a transactional database at the given path with default configuration.
@@ -111,7 +104,7 @@ Opens or creates a keyspace in a transactional database with options.
 
 Returns `{ok, Keyspace}` on success or `{error, Reason}` on failure.
 """.
--spec keyspace(Database :: otx_db(), Name :: binary(), Options :: [ks_option()]) ->
+-spec keyspace(Database :: otx_db(), Name :: binary(), Options :: [fjall:ks_option()]) ->
     fjall:result(fjall_otx_ks:otx_ks()).
 keyspace(Database, Name, Options) ->
     fjall:otx_db_keyspace(Database, Name, Options).

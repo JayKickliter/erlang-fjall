@@ -19,7 +19,7 @@ in the Rust documentation.
     persist/2
 ]).
 
--export_type([db/0, ks_option/0]).
+-export_type([db/0]).
 
 -doc """
 Opaque handle to a plain Fjall database instance.
@@ -28,13 +28,6 @@ Databases are root instances that can contain multiple keyspaces. Use
 `open/1` or `open/2` to create or open a database.
 """.
 -nominal db() :: reference().
-
--doc """
-Keyspace configuration option.
-
-Currently, only default options are supported.
-""".
--type ks_option() :: term().
 
 -doc """
 Opens a database at the given path with default configuration options.
@@ -121,7 +114,7 @@ Opens or creates a keyspace within a database with configuration options.
 
 Returns `{ok, Keyspace}` on success or `{error, Reason}` on failure.
 """.
--spec keyspace(Database :: db(), Name :: binary(), Options :: [ks_option()]) ->
+-spec keyspace(Database :: db(), Name :: binary(), Options :: [fjall:ks_option()]) ->
     fjall:result(fjall_ks:ks()).
 keyspace(Database, Name, Options) ->
     fjall:db_keyspace(Database, Name, Options).
