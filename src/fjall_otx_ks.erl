@@ -22,11 +22,8 @@ in the Rust documentation.
     first_key_value/1,
     last_key_value/1,
     path/1,
-    iter/1,
     iter/2,
-    range/3,
-    range/4,
-    prefix/2,
+    range/5,
     prefix/3
 ]).
 
@@ -300,76 +297,44 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 ## Example
 
 ```erlang
-{ok, Iter} = fjall_otx_ks:iter(Keyspace),
+{ok, Iter} = fjall_otx_ks:iter(Keyspace, forward),
 {ok, Items} = fjall_iter:collect(Iter)
 ```
 
 See [OptimisticTxKeyspace::iter](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxKeyspace.html#method.iter)
 in the Rust documentation.
 """.
--spec iter(otx_ks()) -> fjall:result(fjall_iter:iter()).
-iter(Ks) -> iter(Ks, []).
+-spec iter(otx_ks(), fjall:direction()) -> fjall:result(fjall_iter:iter()).
+iter(Ks, Direction) -> fjall_nif:otx_ks_iter(Ks, Direction).
 
 -doc """
-Creates an iterator over all key-value pairs with options.
+Creates an iterator over a range of keys.
 
-Options:
-- `reverse` - Iterate in reverse order (from last to first)
+The range boundary type is controlled by the `Range` parameter:
+- `inclusive` - Range is `[Start, End]` (end is included)
+- `exclusive` - Range is `[Start, End)` (end is excluded)
 
 Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 
 ## Example
 
 ```erlang
-{ok, Iter} = fjall_otx_ks:iter(Keyspace, [reverse]),
-{ok, Items} = fjall_iter:collect(Iter)
-```
-""".
--spec iter(otx_ks(), [fjall:iter_option()]) -> fjall:result(fjall_iter:iter()).
-iter(Ks, Options) -> fjall_nif:otx_ks_iter(Ks, Options).
+%% Exclusive range [a, d) - returns "a", "b", "c" but not "d"
+{ok, Iter1} = fjall_otx_ks:range(Keyspace, <<"a">>, <<"d">>, forward, exclusive),
 
--doc """
-Creates an iterator over a range of keys `[Start, End)`.
+%% Inclusive range [a, d] - returns "a", "b", "c", "d"
+{ok, Iter2} = fjall_otx_ks:range(Keyspace, <<"a">>, <<"d">>, forward, inclusive),
 
-The range is half-open: Start is inclusive, End is exclusive.
-
-Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
-
-## Example
-
-```erlang
-{ok, Iter} = fjall_otx_ks:range(Keyspace, <<"a">>, <<"d">>),
-{ok, Items} = fjall_iter:collect(Iter)
-%% Returns items with keys: "a", "b", "c" (but not "d")
+%% Reverse order
+{ok, Iter3} = fjall_otx_ks:range(Keyspace, <<"a">>, <<"d">>, reverse, exclusive)
 ```
 
 See [OptimisticTxKeyspace::range](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxKeyspace.html#method.range)
 in the Rust documentation.
 """.
--spec range(otx_ks(), Start :: binary(), End :: binary()) -> fjall:result(fjall_iter:iter()).
-range(Ks, Start, End) -> range(Ks, Start, End, []).
-
--doc """
-Creates an iterator over a range of keys with options.
-
-The range is half-open: Start is inclusive, End is exclusive.
-
-Options:
-- `reverse` - Iterate in reverse order
-
-Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
-
-## Example
-
-```erlang
-{ok, Iter} = fjall_otx_ks:range(Keyspace, <<"a">>, <<"d">>, [reverse]),
-{ok, Items} = fjall_iter:collect(Iter)
-%% Returns items with keys: "c", "b", "a" (but not "d")
-```
-""".
--spec range(otx_ks(), Start :: binary(), End :: binary(), [fjall:iter_option()]) ->
+-spec range(otx_ks(), Start :: binary(), End :: binary(), fjall:direction(), fjall:range()) ->
     fjall:result(fjall_iter:iter()).
-range(Ks, Start, End, Options) -> fjall_nif:otx_ks_range(Ks, Start, End, Options).
+range(Ks, Start, End, Direction, Range) -> fjall_nif:otx_ks_range(Ks, Start, End, Direction, Range).
 
 -doc """
 Creates an iterator over keys with a given prefix.
@@ -379,7 +344,7 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 ## Example
 
 ```erlang
-{ok, Iter} = fjall_otx_ks:prefix(Keyspace, <<"user:">>),
+{ok, Iter} = fjall_otx_ks:prefix(Keyspace, <<"user:">>, forward),
 {ok, Items} = fjall_iter:collect(Iter)
 %% Returns all items with keys starting with "user:"
 ```
@@ -387,23 +352,5 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 See [OptimisticTxKeyspace::prefix](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxKeyspace.html#method.prefix)
 in the Rust documentation.
 """.
--spec prefix(otx_ks(), binary()) -> fjall:result(fjall_iter:iter()).
-prefix(Ks, Prefix) -> prefix(Ks, Prefix, []).
-
--doc """
-Creates an iterator over keys with a given prefix with options.
-
-Options:
-- `reverse` - Iterate in reverse order
-
-Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
-
-## Example
-
-```erlang
-{ok, Iter} = fjall_otx_ks:prefix(Keyspace, <<"user:">>, [reverse]),
-{ok, Items} = fjall_iter:collect(Iter)
-```
-""".
--spec prefix(otx_ks(), binary(), [fjall:iter_option()]) -> fjall:result(fjall_iter:iter()).
-prefix(Ks, Prefix, Options) -> fjall_nif:otx_ks_prefix(Ks, Prefix, Options).
+-spec prefix(otx_ks(), binary(), fjall:direction()) -> fjall:result(fjall_iter:iter()).
+prefix(Ks, Prefix, Direction) -> fjall_nif:otx_ks_prefix(Ks, Prefix, Direction).
