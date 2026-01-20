@@ -83,12 +83,23 @@ ok = fjall_otx_tx:commit(Txn).
     otx_ks_approximate_len/1,
     otx_ks_first_key_value/1,
     otx_ks_last_key_value/1,
-    otx_ks_path/1
+    otx_ks_path/1,
+    % fjall_iter NIFs
+    ks_iter/2,
+    ks_range/4,
+    ks_prefix/3,
+    otx_ks_iter/2,
+    otx_ks_range/4,
+    otx_ks_prefix/3,
+    iter_next/1,
+    iter_collect/2,
+    iter_destroy/1
 ]).
 
 -export_type([
     compression/0,
     config_option/0,
+    iter_option/0,
     ks_option/0,
     persist_mode/0,
     result/0,
@@ -138,6 +149,15 @@ in the Rust documentation for configuration methods.
     | {max_journaling_size, pos_integer()}
     | {temporary, boolean()}
     | {worker_threads, pos_integer()}.
+
+-doc """
+Iterator option.
+
+Supported options:
+
+- `reverse` - Iterate in reverse order (from last to first)
+""".
+-type iter_option() :: reverse.
 
 -doc """
 Keyspace configuration option.
@@ -290,6 +310,36 @@ otx_ks_first_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 otx_ks_last_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec otx_ks_path(Ks :: fjall_otx_ks:otx_ks()) -> binary().
 otx_ks_path(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+% fjall_iter NIFs
+-spec ks_iter(Ks :: fjall_ks:ks(), Options :: [iter_option()]) -> result(fjall_iter:iter()).
+ks_iter(_Ks, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_range(Ks :: fjall_ks:ks(), Start :: binary(), End :: binary(), Options :: [iter_option()]) ->
+    result(fjall_iter:iter()).
+ks_range(_Ks, _Start, _End, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_prefix(Ks :: fjall_ks:ks(), Prefix :: binary(), Options :: [iter_option()]) ->
+    result(fjall_iter:iter()).
+ks_prefix(_Ks, _Prefix, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-spec otx_ks_iter(Ks :: fjall_otx_ks:otx_ks(), Options :: [iter_option()]) ->
+    result(fjall_iter:iter()).
+otx_ks_iter(_Ks, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_ks_range(
+    Ks :: fjall_otx_ks:otx_ks(), Start :: binary(), End :: binary(), Options :: [iter_option()]
+) ->
+    result(fjall_iter:iter()).
+otx_ks_range(_Ks, _Start, _End, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec otx_ks_prefix(Ks :: fjall_otx_ks:otx_ks(), Prefix :: binary(), Options :: [iter_option()]) ->
+    result(fjall_iter:iter()).
+otx_ks_prefix(_Ks, _Prefix, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-spec iter_next(Iter :: fjall_iter:iter()) -> {ok, {binary(), binary()}} | done | {error, term()}.
+iter_next(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec iter_collect(Iter :: fjall_iter:iter(), Limit :: non_neg_integer()) ->
+    {ok, [{binary(), binary()}]} | {error, term()}.
+iter_collect(_Iter, _Limit) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec iter_destroy(Iter :: fjall_iter:iter()) -> ok.
+iter_destroy(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% NIF loader                                                             %%

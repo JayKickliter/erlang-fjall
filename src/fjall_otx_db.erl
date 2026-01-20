@@ -21,17 +21,11 @@ in the Rust documentation.
 
 -doc """
 Opaque handle to an optimistic transactional database instance.
-
-Transactional databases support ACID transactions for atomic
-multi-keyspace updates and snapshot-isolated reads.
 """.
 -nominal otx_db() :: reference().
 
 -doc """
 Opens a transactional database at the given path with default configuration.
-
-Returns a transactional database that supports ACID transactions for
-atomic multi-keyspace writes and snapshot-isolated reads.
 
 Returns `{ok, Database}` on success or `{error, Reason}` on failure.
 

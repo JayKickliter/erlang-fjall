@@ -4,8 +4,7 @@
 Write transaction operations for optimistic transactional databases.
 
 This module provides operations for working with write transactions in
-optimistic transactional databases. Transactions provide ACID guarantees
-with optimistic concurrency control.
+optimistic transactional databases.
 
 See [OptimisticWriteTx](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticWriteTx.html)
 in the Rust documentation.

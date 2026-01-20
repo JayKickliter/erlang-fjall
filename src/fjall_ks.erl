@@ -15,7 +15,13 @@ in the Rust documentation.
     get/2,
     insert/3,
     remove/2,
-    disk_space/1
+    disk_space/1,
+    iter/1,
+    iter/2,
+    range/3,
+    range/4,
+    prefix/2,
+    prefix/3
 ]).
 
 -export_type([ks/0]).
@@ -119,3 +125,119 @@ in the Rust documentation.
 -spec disk_space(Keyspace :: ks()) -> non_neg_integer().
 disk_space(Keyspace) ->
     fjall:ks_disk_space(Keyspace).
+
+-doc """
+Creates an iterator over all key-value pairs in the keyspace.
+
+Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
+
+## Example
+
+```erlang
+{ok, Iter} = fjall_ks:iter(Keyspace),
+{ok, Items} = fjall_iter:collect(Iter)
+```
+
+See [Keyspace::iter](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.iter)
+in the Rust documentation.
+""".
+-spec iter(ks()) -> fjall:result(fjall_iter:iter()).
+iter(Ks) -> iter(Ks, []).
+
+-doc """
+Creates an iterator over all key-value pairs with options.
+
+Options:
+- `reverse` - Iterate in reverse order (from last to first)
+
+Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
+
+## Example
+
+```erlang
+{ok, Iter} = fjall_ks:iter(Keyspace, [reverse]),
+{ok, Items} = fjall_iter:collect(Iter)
+```
+""".
+-spec iter(ks(), [fjall:iter_option()]) -> fjall:result(fjall_iter:iter()).
+iter(Ks, Options) -> fjall:ks_iter(Ks, Options).
+
+-doc """
+Creates an iterator over a range of keys `[Start, End)`.
+
+The range is half-open: Start is inclusive, End is exclusive.
+
+Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
+
+## Example
+
+```erlang
+{ok, Iter} = fjall_ks:range(Keyspace, <<"a">>, <<"d">>),
+{ok, Items} = fjall_iter:collect(Iter)
+%% Returns items with keys: "a", "b", "c" (but not "d")
+```
+
+See [Keyspace::range](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.range)
+in the Rust documentation.
+""".
+-spec range(ks(), Start :: binary(), End :: binary()) -> fjall:result(fjall_iter:iter()).
+range(Ks, Start, End) -> range(Ks, Start, End, []).
+
+-doc """
+Creates an iterator over a range of keys with options.
+
+The range is half-open: Start is inclusive, End is exclusive.
+
+Options:
+- `reverse` - Iterate in reverse order
+
+Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
+
+## Example
+
+```erlang
+{ok, Iter} = fjall_ks:range(Keyspace, <<"a">>, <<"d">>, [reverse]),
+{ok, Items} = fjall_iter:collect(Iter)
+%% Returns items with keys: "c", "b", "a" (but not "d")
+```
+""".
+-spec range(ks(), Start :: binary(), End :: binary(), [fjall:iter_option()]) ->
+    fjall:result(fjall_iter:iter()).
+range(Ks, Start, End, Options) -> fjall:ks_range(Ks, Start, End, Options).
+
+-doc """
+Creates an iterator over keys with a given prefix.
+
+Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
+
+## Example
+
+```erlang
+{ok, Iter} = fjall_ks:prefix(Keyspace, <<"user:">>),
+{ok, Items} = fjall_iter:collect(Iter)
+%% Returns all items with keys starting with "user:"
+```
+
+See [Keyspace::prefix](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.prefix)
+in the Rust documentation.
+""".
+-spec prefix(ks(), binary()) -> fjall:result(fjall_iter:iter()).
+prefix(Ks, Prefix) -> prefix(Ks, Prefix, []).
+
+-doc """
+Creates an iterator over keys with a given prefix with options.
+
+Options:
+- `reverse` - Iterate in reverse order
+
+Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
+
+## Example
+
+```erlang
+{ok, Iter} = fjall_ks:prefix(Keyspace, <<"user:">>, [reverse]),
+{ok, Items} = fjall_iter:collect(Iter)
+```
+""".
+-spec prefix(ks(), binary(), [fjall:iter_option()]) -> fjall:result(fjall_iter:iter()).
+prefix(Ks, Prefix, Options) -> fjall:ks_prefix(Ks, Prefix, Options).
