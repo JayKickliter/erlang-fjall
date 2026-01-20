@@ -3,38 +3,27 @@
 -moduledoc """
 Fjall embedded key-value database for Erlang.
 
-This module provides shared types and configuration options used across
-the Fjall database modules.
+This module provides a unified API that dispatches on tuple tags.
 
-## Modules
-
-- `fjall_db` - Plain non-transactional database operations
-- `fjall_ks` - Plain non-transactional keyspace operations
-- `fjall_wb` - Write batch operations
-- `fjall_otx_db` - Optimistic transactional database operations
-- `fjall_otx_ks` - Optimistic transactional keyspace operations
-- `fjall_otx_tx` - Write transaction operations
-- `fjall_snapshot` - Read snapshot operations
-
-## Example (Non-Transactional)
+## Example (Non-Optimistic)
 
 ```erlang
-{ok, Database} = fjall_db:open("./mydb"),
-{ok, Keyspace} = fjall_db:keyspace(Database, <<"default">>),
-ok = fjall_ks:insert(Keyspace, <<"key">>, <<"value">>),
-{ok, <<"value">>} = fjall_ks:get(Keyspace, <<"key">>),
-ok = fjall_ks:remove(Keyspace, <<"key">>).
+{ok, Db} = fjall:open("./mydb"),
+{ok, Ks} = fjall:keyspace(Db, <<"default">>),
+ok = fjall:insert(Ks, <<"key">>, <<"value">>),
+{ok, <<"value">>} = fjall:get(Ks, <<"key">>),
+ok = fjall:remove(Ks, <<"key">>).
 ```
 
-## Example (Transactional)
+## Example (Optimistic Transactions)
 
 ```erlang
-{ok, Database} = fjall_otx_db:open("./txn_db"),
-{ok, Keyspace} = fjall_otx_db:keyspace(Database, <<"default">>),
-{ok, Txn} = fjall_otx_db:write_tx(Database),
-ok = fjall_otx_tx:insert(Txn, Keyspace, <<"key">>, <<"value">>),
-{ok, <<"value">>} = fjall_otx_tx:get(Txn, Keyspace, <<"key">>),
-ok = fjall_otx_tx:commit(Txn).
+{ok, Db} = fjall:open("./mydb", [{optimistic, true}]),
+{ok, Ks} = fjall:keyspace(Db, <<"default">>),
+{ok, Tx} = fjall:write_tx(Db),
+ok = fjall:insert(Tx, Ks, <<"key">>, <<"value">>),
+{ok, <<"value">>} = fjall:get(Tx, Ks, <<"key">>),
+ok = fjall:commit(Tx).
 ```
 """.
 
