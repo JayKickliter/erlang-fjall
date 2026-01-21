@@ -105,6 +105,64 @@ iter_collect_test() ->
 
     ok.
 
+iter_collect_keys_test() ->
+    DbPath = test_db_path("iter_collect_keys"),
+    {ok, Db} = fjall:open(DbPath, [{temporary, true}]),
+    {ok, Ks} = fjall:keyspace(Db, <<"test">>),
+
+    ok = fjall:insert(Ks, <<"a">>, <<"1">>),
+    ok = fjall:insert(Ks, <<"b">>, <<"2">>),
+    ok = fjall:insert(Ks, <<"c">>, <<"3">>),
+
+    % collect_keys/1 - all keys
+    {ok, Iter1} = fjall:iter(Ks, forward),
+    {ok, Keys1} = fjall:collect_keys(Iter1),
+    [<<"a">>, <<"b">>, <<"c">>] = Keys1,
+
+    % collect_keys/2 - with limit
+    {ok, Iter2} = fjall:iter(Ks, forward),
+    {ok, Keys2} = fjall:collect_keys(Iter2, 2),
+    [<<"a">>, <<"b">>] = Keys2,
+    {ok, Keys3} = fjall:collect_keys(Iter2, 2),
+    [<<"c">>] = Keys3,
+    {ok, []} = fjall:collect_keys(Iter2, 2),
+
+    % collect_keys with reverse
+    {ok, Iter3} = fjall:iter(Ks, reverse),
+    {ok, Keys4} = fjall:collect_keys(Iter3),
+    [<<"c">>, <<"b">>, <<"a">>] = Keys4,
+
+    ok.
+
+iter_collect_values_test() ->
+    DbPath = test_db_path("iter_collect_values"),
+    {ok, Db} = fjall:open(DbPath, [{temporary, true}]),
+    {ok, Ks} = fjall:keyspace(Db, <<"test">>),
+
+    ok = fjall:insert(Ks, <<"a">>, <<"1">>),
+    ok = fjall:insert(Ks, <<"b">>, <<"2">>),
+    ok = fjall:insert(Ks, <<"c">>, <<"3">>),
+
+    % collect_values/1 - all values
+    {ok, Iter1} = fjall:iter(Ks, forward),
+    {ok, Values1} = fjall:collect_values(Iter1),
+    [<<"1">>, <<"2">>, <<"3">>] = Values1,
+
+    % collect_values/2 - with limit
+    {ok, Iter2} = fjall:iter(Ks, forward),
+    {ok, Values2} = fjall:collect_values(Iter2, 2),
+    [<<"1">>, <<"2">>] = Values2,
+    {ok, Values3} = fjall:collect_values(Iter2, 2),
+    [<<"3">>] = Values3,
+    {ok, []} = fjall:collect_values(Iter2, 2),
+
+    % collect_values with reverse
+    {ok, Iter3} = fjall:iter(Ks, reverse),
+    {ok, Values4} = fjall:collect_values(Iter3),
+    [<<"3">>, <<"2">>, <<"1">>] = Values4,
+
+    ok.
+
 range_test() ->
     DbPath = test_db_path("range"),
     {ok, Db} = fjall:open(DbPath, [{temporary, true}]),

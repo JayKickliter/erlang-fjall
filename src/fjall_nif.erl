@@ -68,6 +68,10 @@
     % fjall_iter NIFs
     iter_collect/1,
     iter_collect/2,
+    iter_collect_keys/1,
+    iter_collect_keys/2,
+    iter_collect_values/1,
+    iter_collect_values/2,
     iter_destroy/1,
     iter_next/1
 ]).
@@ -223,6 +227,18 @@ iter_collect(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec iter_collect(Iter :: fjall_iter:iter(), Limit :: non_neg_integer()) ->
     {ok, [{binary(), binary()}]} | {error, term()}.
 iter_collect(_Iter, _Limit) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-spec iter_collect_keys(Iter :: fjall_iter:iter()) -> {ok, [binary()]} | {error, term()}.
+iter_collect_keys(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec iter_collect_keys(Iter :: fjall_iter:iter(), Limit :: non_neg_integer()) ->
+    {ok, [binary()]} | {error, term()}.
+iter_collect_keys(_Iter, _Limit) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-spec iter_collect_values(Iter :: fjall_iter:iter()) -> {ok, [binary()]} | {error, term()}.
+iter_collect_values(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec iter_collect_values(Iter :: fjall_iter:iter(), Limit :: non_neg_integer()) ->
+    {ok, [binary()]} | {error, term()}.
+iter_collect_values(_Iter, _Limit) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 -spec iter_destroy(Iter :: fjall_iter:iter()) -> ok.
 iter_destroy(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).

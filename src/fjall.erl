@@ -83,6 +83,10 @@ ok = fjall:commit(Tx).
     next/1,
     collect/1,
     collect/2,
+    collect_keys/1,
+    collect_keys/2,
+    collect_values/1,
+    collect_values/2,
     destroy/1
 ]).
 
@@ -466,6 +470,26 @@ collect(Iter) ->
 -spec collect(iter(), pos_integer()) -> {ok, [{binary(), binary()}]} | {error, term()}.
 collect(Iter, N) ->
     fjall_iter:collect(Iter, N).
+
+-doc "Returns a list of all remaining keys from the iterator.".
+-spec collect_keys(iter()) -> {ok, [binary()]} | {error, term()}.
+collect_keys(Iter) ->
+    fjall_iter:collect_keys(Iter).
+
+-doc "Returns a list of up to `N` keys from the iterator.".
+-spec collect_keys(iter(), pos_integer()) -> {ok, [binary()]} | {error, term()}.
+collect_keys(Iter, N) ->
+    fjall_iter:collect_keys(Iter, N).
+
+-doc "Returns a list of all remaining values from the iterator.".
+-spec collect_values(iter()) -> {ok, [binary()]} | {error, term()}.
+collect_values(Iter) ->
+    fjall_iter:collect_values(Iter).
+
+-doc "Returns a list of up to `N` values from the iterator.".
+-spec collect_values(iter(), pos_integer()) -> {ok, [binary()]} | {error, term()}.
+collect_values(Iter, N) ->
+    fjall_iter:collect_values(Iter, N).
 
 -doc "Destroys the iterator. Call this to release resources without waiting for GC.".
 -spec destroy(iter()) -> ok.
