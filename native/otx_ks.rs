@@ -1,6 +1,7 @@
-use crate::error::{FjallBinaryResult, FjallError, FjallOkResult, FjallRes, FjallResult};
+use crate::error::{
+    FjallBinaryResult, FjallError, FjallKvResult, FjallOkResult, FjallRes, FjallResult,
+};
 use rustler::{Resource, ResourceArc};
-use std::path::PathBuf;
 
 ////////////////////////////////////////////////////////////////////////////
 // Optimistic Transaction Keyspace Resource                              //
@@ -88,7 +89,7 @@ pub fn otx_ks_approximate_len(ks: ResourceArc<OtxKsRsc>) -> u64 {
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn otx_ks_first_key_value(ks: ResourceArc<OtxKsRsc>) -> FjallResult<(Vec<u8>, Vec<u8>)> {
+pub fn otx_ks_first_key_value(ks: ResourceArc<OtxKsRsc>) -> FjallKvResult {
     let result = (|| match ks.0.first_key_value() {
         Some(guard) => {
             let (k, v) = guard.into_inner().to_erlang_result()?;
@@ -96,11 +97,11 @@ pub fn otx_ks_first_key_value(ks: ResourceArc<OtxKsRsc>) -> FjallResult<(Vec<u8>
         }
         None => Err(FjallError::NotFound),
     })();
-    FjallResult(result)
+    FjallKvResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn otx_ks_last_key_value(ks: ResourceArc<OtxKsRsc>) -> FjallResult<(Vec<u8>, Vec<u8>)> {
+pub fn otx_ks_last_key_value(ks: ResourceArc<OtxKsRsc>) -> FjallKvResult {
     let result = (|| match ks.0.last_key_value() {
         Some(guard) => {
             let (k, v) = guard.into_inner().to_erlang_result()?;
@@ -108,11 +109,10 @@ pub fn otx_ks_last_key_value(ks: ResourceArc<OtxKsRsc>) -> FjallResult<(Vec<u8>,
         }
         None => Err(FjallError::NotFound),
     })();
-    FjallResult(result)
+    FjallKvResult(result)
 }
 
 #[rustler::nif]
 pub fn otx_ks_path(ks: ResourceArc<OtxKsRsc>) -> String {
-    let path: PathBuf = ks.0.path();
-    path.to_string_lossy().into_owned()
+    ks.0.path().to_string_lossy().into_owned()
 }

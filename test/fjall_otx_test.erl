@@ -187,5 +187,50 @@ iter_destroy_test() ->
 
     ok.
 
+keyspace_info_test() ->
+    DbPath = test_db_path("keyspace_info"),
+    {ok, Db} = fjall:open(DbPath, [{optimistic, true}, {temporary, true}]),
+    {ok, Ks} = fjall:keyspace(Db, <<"test">>),
+
+    % Empty keyspace
+    {error, not_found} = fjall:first_key_value(Ks),
+    {error, not_found} = fjall:last_key_value(Ks),
+
+    % Insert test data
+    ok = fjall:insert(Ks, <<"a">>, <<"1">>),
+    ok = fjall:insert(Ks, <<"b">>, <<"22">>),
+    ok = fjall:insert(Ks, <<"c">>, <<"333">>),
+
+    % contains_key
+    {ok, true} = fjall:contains_key(Ks, <<"a">>),
+    {ok, false} = fjall:contains_key(Ks, <<"nonexistent">>),
+
+    % size_of
+    {ok, 1} = fjall:size_of(Ks, <<"a">>),
+    {ok, 2} = fjall:size_of(Ks, <<"b">>),
+    {ok, 3} = fjall:size_of(Ks, <<"c">>),
+    {error, not_found} = fjall:size_of(Ks, <<"nonexistent">>),
+
+    % approximate_len (should be around 3)
+    Len = fjall:approximate_len(Ks),
+    true = Len >= 0,
+
+    % first_key_value
+    {ok, {<<"a">>, <<"1">>}} = fjall:first_key_value(Ks),
+
+    % last_key_value
+    {ok, {<<"c">>, <<"333">>}} = fjall:last_key_value(Ks),
+
+    % path
+    Path = fjall:path(Ks),
+    true = is_binary(Path),
+
+    % take (only available on otx_ks)
+    {ok, <<"1">>} = fjall:take(Ks, <<"a">>),
+    {error, not_found} = fjall:take(Ks, <<"a">>),
+    {ok, false} = fjall:contains_key(Ks, <<"a">>),
+
+    ok.
+
 test_db_path(Name) ->
     filename:join(["/tmp", "fjall_otx_test", Name]).

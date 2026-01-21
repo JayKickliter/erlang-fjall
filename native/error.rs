@@ -141,6 +141,36 @@ impl Encoder for FjallBinaryResult {
     }
 }
 
+// Wrapper for operations that return a key-value pair as binaries
+pub struct FjallKvResult(pub Result<(Vec<u8>, Vec<u8>), FjallError>);
+
+impl std::panic::RefUnwindSafe for FjallKvResult {}
+
+impl Encoder for FjallKvResult {
+    fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
+        match &self.0 {
+            Ok((key, value)) => {
+                let key_bin = match rustler::OwnedBinary::new(key.len()) {
+                    Some(mut owned_bin) => {
+                        owned_bin.as_mut_slice().copy_from_slice(key);
+                        owned_bin.release(env)
+                    }
+                    None => rustler::OwnedBinary::new(0).unwrap().release(env),
+                };
+                let value_bin = match rustler::OwnedBinary::new(value.len()) {
+                    Some(mut owned_bin) => {
+                        owned_bin.as_mut_slice().copy_from_slice(value);
+                        owned_bin.release(env)
+                    }
+                    None => rustler::OwnedBinary::new(0).unwrap().release(env),
+                };
+                (atom::ok(), (key_bin, value_bin)).encode(env)
+            }
+            Err(err) => err.encode(env),
+        }
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////
 // FjallRes Trait                                                         //
 ////////////////////////////////////////////////////////////////////////////

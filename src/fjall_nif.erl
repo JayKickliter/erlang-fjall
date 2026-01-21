@@ -12,13 +12,19 @@
     db_persist/2,
 
     % fjall_ks NIFs
+    ks_approximate_len/1,
+    ks_contains_key/2,
     ks_disk_space/1,
+    ks_first_key_value/1,
     ks_get/2,
     ks_insert/3,
     ks_iter/2,
+    ks_last_key_value/1,
+    ks_path/1,
     ks_prefix/3,
     ks_range/5,
     ks_remove/2,
+    ks_size_of/2,
 
     % fjall_wb NIFs
     wb_commit/1,
@@ -91,6 +97,18 @@ ks_insert(_Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 ks_remove(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec ks_disk_space(Ks :: fjall_ks:ks()) -> non_neg_integer().
 ks_disk_space(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_contains_key(Ks :: fjall_ks:ks(), Key :: binary()) -> fjall:result(boolean()).
+ks_contains_key(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_size_of(Ks :: fjall_ks:ks(), Key :: binary()) -> fjall:result(non_neg_integer()).
+ks_size_of(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_approximate_len(Ks :: fjall_ks:ks()) -> non_neg_integer().
+ks_approximate_len(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_first_key_value(Ks :: fjall_ks:ks()) -> fjall:result({binary(), binary()}).
+ks_first_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_last_key_value(Ks :: fjall_ks:ks()) -> fjall:result({binary(), binary()}).
+ks_last_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_path(Ks :: fjall_ks:ks()) -> binary().
+ks_path(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_wb NIFs
 -spec wb_insert(Batch :: fjall_wb:wb(), Ks :: fjall_ks:ks(), Key :: binary(), Value :: binary()) ->
