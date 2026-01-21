@@ -85,18 +85,6 @@ pub fn wb_commit(batch: ResourceArc<WbRsc>) -> FjallOkResult {
     FjallOkResult(result)
 }
 
-#[rustler::nif(schedule = "DirtyIo")]
-pub fn wb_commit_with_mode(batch: ResourceArc<WbRsc>, _mode: rustler::Atom) -> FjallOkResult {
-    let result = (|| {
-        // Note: OwnedWriteBatch::commit() doesn't support persist modes
-        // The persist mode is ignored and commit() is called directly
-        let wb = batch.take_batch()?;
-        wb.commit().to_erlang_result()?;
-        Ok(())
-    })();
-    FjallOkResult(result)
-}
-
 #[rustler::nif]
 pub fn wb_len(batch: ResourceArc<WbRsc>) -> usize {
     batch.with_batch_mut(|b| b.len()).unwrap_or(0)

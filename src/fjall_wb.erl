@@ -15,7 +15,6 @@ in the Rust documentation.
     insert/4,
     remove/3,
     commit/1,
-    commit/2,
     len/1,
     is_empty/1
 ]).
@@ -34,7 +33,7 @@ group multiple write operations atomically.
 Inserts a key-value pair into the batch for a specific keyspace.
 
 The write is buffered in the batch and will only be applied when
-`commit/1` or `commit/2` is called.
+`commit/1` is called.
 
 Returns `ok` on success.
 
@@ -63,7 +62,7 @@ insert(Batch, Keyspace, Key, Value) ->
 Removes a key from the batch for a specific keyspace.
 
 The removal is buffered in the batch and will only be applied when
-`commit/1` or `commit/2` is called.
+`commit/1` is called.
 
 Returns `ok` on success.
 
@@ -108,27 +107,6 @@ in the Rust documentation.
 -spec commit(Batch :: wb()) -> fjall:result().
 commit(Batch) ->
     fjall_nif:wb_commit(Batch).
-
--doc """
-Commits the batch with a specified persistence mode.
-
-Like `commit/1`, but allows specifying the durability guarantee.
-
-Returns `ok` on success or `{error, Reason}` on failure.
-
-## Example
-
-```erlang
-{ok, Batch} = fjall_db:batch(Database),
-ok = fjall_wb:insert(Batch, Keyspace, <<"key">>, <<"value">>),
-ok = fjall_wb:commit(Batch, sync_all)
-```
-
-See `t:fjall:persist_mode/0` for available persist modes.
-""".
--spec commit(Batch :: wb(), Mode :: fjall:persist_mode()) -> fjall:result().
-commit(Batch, Mode) ->
-    fjall_nif:wb_commit_with_mode(Batch, Mode).
 
 -doc """
 Returns the number of operations in the batch.

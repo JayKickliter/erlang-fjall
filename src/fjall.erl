@@ -61,7 +61,7 @@ ok = fjall:commit(Tx).
     remove/2, remove/3,
 
     %% Batch/transaction
-    commit/1, commit/2,
+    commit/1,
     rollback/1,
     len/1,
     is_empty/1,
@@ -360,11 +360,6 @@ commit({batch, Ref}) ->
     fjall_wb:commit(Ref);
 commit({tx, Ref}) ->
     fjall_otx_tx:commit(Ref).
-
--doc "Commits a batch with the given persist `Mode`.".
--spec commit(batch(), Mode :: persist_mode()) -> result().
-commit({batch, Ref}, Mode) ->
-    fjall_wb:commit(Ref, Mode).
 
 -doc "Returns the number of operations in the batch.".
 -spec len(batch()) -> non_neg_integer().
