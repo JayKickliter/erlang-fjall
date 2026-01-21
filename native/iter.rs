@@ -231,7 +231,7 @@ pub fn iter_collect_n<'a>(
     let Some(itr) = guard.as_mut() else {
         return (atom::ok(), Vec::<(Binary, Binary)>::new()).encode(env);
     };
-    let max = limit.filter(|&n| n > 0).unwrap_or(usize::MAX);
+    let max = limit.unwrap_or(usize::MAX);
     let mut items: Vec<Term<'a>> = Vec::new();
     for _ in 0..max {
         match itr.next().map(|g| g.into_inner()) {
