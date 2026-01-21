@@ -17,7 +17,7 @@
     ks_insert/3,
     ks_iter/2,
     ks_prefix/3,
-    ks_range/4,
+    ks_range/5,
     ks_remove/2,
 
     % fjall_wb NIFs
@@ -45,7 +45,7 @@
     otx_ks_last_key_value/1,
     otx_ks_path/1,
     otx_ks_prefix/3,
-    otx_ks_range/4,
+    otx_ks_range/5,
     otx_ks_remove/2,
     otx_ks_size_of/2,
     otx_ks_take/2,
@@ -167,34 +167,39 @@ otx_ks_last_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 otx_ks_path(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_iter NIFs
--spec ks_iter(Ks :: fjall_ks:ks(), Options :: [fjall:iter_option()]) ->
+-spec ks_iter(Ks :: fjall_ks:ks(), Direction :: fjall:direction()) ->
     fjall:result(fjall_iter:iter()).
-ks_iter(_Ks, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+ks_iter(_Ks, _Direction) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec ks_range(
-    Ks :: fjall_ks:ks(), Start :: binary(), End :: binary(), Options :: [fjall:iter_option()]
+    Ks :: fjall_ks:ks(),
+    Direction :: fjall:direction(),
+    Range :: fjall:range(),
+    Start :: binary(),
+    End :: binary()
 ) ->
     fjall:result(fjall_iter:iter()).
-ks_range(_Ks, _Start, _End, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec ks_prefix(Ks :: fjall_ks:ks(), Prefix :: binary(), Options :: [fjall:iter_option()]) ->
+ks_range(_Ks, _Direction, _Range, _Start, _End) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_prefix(Ks :: fjall_ks:ks(), Direction :: fjall:direction(), Prefix :: binary()) ->
     fjall:result(fjall_iter:iter()).
-ks_prefix(_Ks, _Prefix, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+ks_prefix(_Ks, _Direction, _Prefix) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec otx_ks_iter(Ks :: fjall_otx_ks:otx_ks(), Options :: [fjall:iter_option()]) ->
+-spec otx_ks_iter(Ks :: fjall_otx_ks:otx_ks(), Direction :: fjall:direction()) ->
     fjall:result(fjall_iter:iter()).
-otx_ks_iter(_Ks, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_iter(_Ks, _Direction) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec otx_ks_range(
     Ks :: fjall_otx_ks:otx_ks(),
+    Direction :: fjall:direction(),
+    Range :: fjall:range(),
     Start :: binary(),
-    End :: binary(),
-    Options :: [fjall:iter_option()]
+    End :: binary()
 ) ->
     fjall:result(fjall_iter:iter()).
-otx_ks_range(_Ks, _Start, _End, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_range(_Ks, _Direction, _Range, _Start, _End) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec otx_ks_prefix(
-    Ks :: fjall_otx_ks:otx_ks(), Prefix :: binary(), Options :: [fjall:iter_option()]
+    Ks :: fjall_otx_ks:otx_ks(), Direction :: fjall:direction(), Prefix :: binary()
 ) ->
     fjall:result(fjall_iter:iter()).
-otx_ks_prefix(_Ks, _Prefix, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+otx_ks_prefix(_Ks, _Direction, _Prefix) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 -spec iter_next(Iter :: fjall_iter:iter()) -> {ok, {binary(), binary()}} | done | {error, term()}.
 iter_next(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).

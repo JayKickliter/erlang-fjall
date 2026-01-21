@@ -77,13 +77,13 @@ iter_test() ->
     ok = fjall:insert(Ks, <<"b">>, <<"2">>),
     ok = fjall:insert(Ks, <<"c">>, <<"3">>),
 
-    % Test iter/1 with collect
-    {ok, Iter1} = fjall:iter(Ks),
+    % Test iter/2 with forward
+    {ok, Iter1} = fjall:iter(Ks, forward),
     {ok, Items1} = fjall:collect(Iter1),
     [{<<"a">>, <<"1">>}, {<<"b">>, <<"2">>}, {<<"c">>, <<"3">>}] = Items1,
 
     % Test iter/2 with reverse
-    {ok, Iter2} = fjall:iter(Ks, [reverse]),
+    {ok, Iter2} = fjall:iter(Ks, reverse),
     {ok, Items2} = fjall:collect(Iter2),
     [{<<"c">>, <<"3">>}, {<<"b">>, <<"2">>}, {<<"a">>, <<"1">>}] = Items2,
 
@@ -97,7 +97,7 @@ iter_next_test() ->
     ok = fjall:insert(Ks, <<"x">>, <<"1">>),
     ok = fjall:insert(Ks, <<"y">>, <<"2">>),
 
-    {ok, Iter} = fjall:iter(Ks),
+    {ok, Iter} = fjall:iter(Ks, forward),
     {ok, {<<"x">>, <<"1">>}} = fjall:next(Iter),
     {ok, {<<"y">>, <<"2">>}} = fjall:next(Iter),
     done = fjall:next(Iter),
@@ -115,7 +115,7 @@ iter_take_test() ->
     ok = fjall:insert(Ks, <<"b">>, <<"2">>),
     ok = fjall:insert(Ks, <<"c">>, <<"3">>),
 
-    {ok, Iter} = fjall:iter(Ks),
+    {ok, Iter} = fjall:iter(Ks, forward),
     {ok, Items1} = fjall:take(Iter, 2),
     [{<<"a">>, <<"1">>}, {<<"b">>, <<"2">>}] = Items1,
     {ok, Items2} = fjall:take(Iter, 2),
@@ -134,15 +134,20 @@ range_test() ->
     ok = fjall:insert(Ks, <<"c">>, <<"3">>),
     ok = fjall:insert(Ks, <<"d">>, <<"4">>),
 
-    % Range [b, d) - half-open interval
-    {ok, Iter1} = fjall:range(Ks, <<"b">>, <<"d">>),
+    % Exclusive range [b, d) - half-open interval
+    {ok, Iter1} = fjall:range(Ks, forward, exclusive, <<"b">>, <<"d">>),
     {ok, Items1} = fjall:collect(Iter1),
     [{<<"b">>, <<"2">>}, {<<"c">>, <<"3">>}] = Items1,
 
-    % Range with reverse
-    {ok, Iter2} = fjall:range(Ks, <<"b">>, <<"d">>, [reverse]),
+    % Exclusive range with reverse
+    {ok, Iter2} = fjall:range(Ks, reverse, exclusive, <<"b">>, <<"d">>),
     {ok, Items2} = fjall:collect(Iter2),
     [{<<"c">>, <<"3">>}, {<<"b">>, <<"2">>}] = Items2,
+
+    % Inclusive range [b, d] - closed interval
+    {ok, Iter3} = fjall:range(Ks, forward, inclusive, <<"b">>, <<"d">>),
+    {ok, Items3} = fjall:collect(Iter3),
+    [{<<"b">>, <<"2">>}, {<<"c">>, <<"3">>}, {<<"d">>, <<"4">>}] = Items3,
 
     ok.
 
@@ -156,13 +161,13 @@ prefix_test() ->
     ok = fjall:insert(Ks, <<"order:1">>, <<"pizza">>),
 
     % Prefix scan
-    {ok, Iter1} = fjall:prefix(Ks, <<"user:">>),
+    {ok, Iter1} = fjall:prefix(Ks, forward, <<"user:">>),
     {ok, Items1} = fjall:collect(Iter1),
     [{<<"user:1">>, <<"alice">>}, {<<"user:2">>, <<"bob">>}] = Items1,
     done = fjall:next(Iter1),
 
     % Prefix with reverse
-    {ok, Iter2} = fjall:prefix(Ks, <<"user:">>, [reverse]),
+    {ok, Iter2} = fjall:prefix(Ks, reverse, <<"user:">>),
     {ok, Items2} = fjall:collect(Iter2),
     [{<<"user:2">>, <<"bob">>}, {<<"user:1">>, <<"alice">>}] = Items2,
 
@@ -175,7 +180,7 @@ iter_destroy_test() ->
 
     ok = fjall:insert(Ks, <<"a">>, <<"1">>),
 
-    {ok, Iter} = fjall:iter(Ks),
+    {ok, Iter} = fjall:iter(Ks, forward),
     ok = fjall:destroy(Iter),
     % After destroy, iterator returns done
     done = fjall:next(Iter),
