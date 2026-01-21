@@ -107,62 +107,6 @@ impl Encoder for FjallOkResult {
     }
 }
 
-// Wrapper for get operations that return binary data
-pub struct FjallBinaryResult(pub Result<Vec<u8>, FjallError>);
-
-impl Encoder for FjallBinaryResult {
-    fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
-        match &self.0 {
-            Ok(data) => {
-                // Create a binary from the Vec<u8> by encoding it as a binary slice
-                match rustler::OwnedBinary::new(data.len()) {
-                    Some(mut owned_bin) => {
-                        owned_bin.as_mut_slice().copy_from_slice(data);
-                        (atom::ok(), owned_bin.release(env)).encode(env)
-                    }
-                    None => {
-                        // Fallback: encode as empty binary if allocation fails
-                        (
-                            atom::ok(),
-                            rustler::OwnedBinary::new(0).unwrap().release(env),
-                        )
-                            .encode(env)
-                    }
-                }
-            }
-            Err(err) => err.encode(env),
-        }
-    }
-}
-
-// Wrapper for operations that return a key-value pair as binaries
-pub struct FjallKvResult(pub Result<(Vec<u8>, Vec<u8>), FjallError>);
-
-impl Encoder for FjallKvResult {
-    fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
-        match &self.0 {
-            Ok((key, value)) => {
-                let key_bin = match rustler::OwnedBinary::new(key.len()) {
-                    Some(mut owned_bin) => {
-                        owned_bin.as_mut_slice().copy_from_slice(key);
-                        owned_bin.release(env)
-                    }
-                    None => rustler::OwnedBinary::new(0).unwrap().release(env),
-                };
-                let value_bin = match rustler::OwnedBinary::new(value.len()) {
-                    Some(mut owned_bin) => {
-                        owned_bin.as_mut_slice().copy_from_slice(value);
-                        owned_bin.release(env)
-                    }
-                    None => rustler::OwnedBinary::new(0).unwrap().release(env),
-                };
-                (atom::ok(), (key_bin, value_bin)).encode(env)
-            }
-            Err(err) => err.encode(env),
-        }
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////
 // FjallRes Trait                                                         //
 ////////////////////////////////////////////////////////////////////////////

@@ -1,7 +1,8 @@
-use crate::error::{
-    FjallBinaryResult, FjallError, FjallKvResult, FjallOkResult, FjallRes, FjallResult,
+use crate::{
+    error::{FjallError, FjallOkResult, FjallRes, FjallResult},
+    make_binary,
 };
-use rustler::{Resource, ResourceArc};
+use rustler::{types::tuple::make_tuple, Encoder, Env, Resource, ResourceArc, Term};
 
 ////////////////////////////////////////////////////////////////////////////
 // Optimistic Transaction Keyspace Resource                              //
@@ -33,15 +34,19 @@ pub fn otx_ks_insert(
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn otx_ks_get(ks: ResourceArc<OtxKsRsc>, key: rustler::Binary) -> FjallBinaryResult {
+pub fn otx_ks_get<'a>(
+    env: Env<'a>,
+    ks: ResourceArc<OtxKsRsc>,
+    key: rustler::Binary,
+) -> FjallResult<Term<'a>> {
     let result = (|| {
         let val = ks.0.get(key.as_slice()).to_erlang_result()?;
         match val {
-            Some(value) => Ok(value.to_vec()),
+            Some(value) => Ok(make_binary(env, &value).encode(env)),
             None => Err(FjallError::NotFound),
         }
     })();
-    FjallBinaryResult(result)
+    FjallResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
@@ -54,15 +59,19 @@ pub fn otx_ks_remove(ks: ResourceArc<OtxKsRsc>, key: rustler::Binary) -> FjallOk
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn otx_ks_take(ks: ResourceArc<OtxKsRsc>, key: rustler::Binary) -> FjallBinaryResult {
+pub fn otx_ks_take<'a>(
+    env: Env<'a>,
+    ks: ResourceArc<OtxKsRsc>,
+    key: rustler::Binary,
+) -> FjallResult<Term<'a>> {
     let result = (|| {
         let val = ks.0.take(key.as_slice()).to_erlang_result()?;
         match val {
-            Some(value) => Ok(value.to_vec()),
+            Some(value) => Ok(make_binary(env, &value).encode(env)),
             None => Err(FjallError::NotFound),
         }
     })();
-    FjallBinaryResult(result)
+    FjallResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
@@ -89,27 +98,44 @@ pub fn otx_ks_approximate_len(ks: ResourceArc<OtxKsRsc>) -> u64 {
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn otx_ks_first_key_value(ks: ResourceArc<OtxKsRsc>) -> FjallKvResult {
+pub fn otx_ks_first_key_value<'a>(
+    env: Env<'a>,
+    ks: ResourceArc<OtxKsRsc>,
+) -> FjallResult<Term<'a>> {
     let result = (|| match ks.0.first_key_value() {
         Some(guard) => {
             let (k, v) = guard.into_inner().to_erlang_result()?;
-            Ok((k.to_vec(), v.to_vec()))
+            let kv = make_tuple(
+                env,
+                &[
+                    make_binary(env, &k).encode(env),
+                    make_binary(env, &v).encode(env),
+                ],
+            );
+            Ok(kv)
         }
         None => Err(FjallError::NotFound),
     })();
-    FjallKvResult(result)
+    FjallResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn otx_ks_last_key_value(ks: ResourceArc<OtxKsRsc>) -> FjallKvResult {
+pub fn otx_ks_last_key_value<'a>(env: Env<'a>, ks: ResourceArc<OtxKsRsc>) -> FjallResult<Term<'a>> {
     let result = (|| match ks.0.last_key_value() {
         Some(guard) => {
             let (k, v) = guard.into_inner().to_erlang_result()?;
-            Ok((k.to_vec(), v.to_vec()))
+            let kv = make_tuple(
+                env,
+                &[
+                    make_binary(env, &k).encode(env),
+                    make_binary(env, &v).encode(env),
+                ],
+            );
+            Ok(kv)
         }
         None => Err(FjallError::NotFound),
     })();
-    FjallKvResult(result)
+    FjallResult(result)
 }
 
 #[rustler::nif]

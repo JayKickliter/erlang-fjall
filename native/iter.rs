@@ -3,9 +3,7 @@ use crate::{
     ks::KsRsc,
     otx_ks::OtxKsRsc,
 };
-use rustler::{
-    Atom, Binary, Decoder, Encoder, Env, NewBinary, NifResult, Resource, ResourceArc, Term,
-};
+use rustler::{Atom, Binary, Decoder, Encoder, Env, NifResult, Resource, ResourceArc, Term};
 use std::sync::Mutex;
 
 mod atoms {
@@ -201,8 +199,8 @@ pub fn iter_next<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>) -> Term<'a> {
             atoms::done().encode(env)
         }
         Some(Ok((k, v))) => {
-            let k = make_binary(env, &k);
-            let v = make_binary(env, &v);
+            let k = crate::make_binary(env, &k);
+            let v = crate::make_binary(env, &v);
             (atom::ok(), (k, v)).encode(env)
         }
         Some(Err(e)) => FjallError::from(e).encode(env),
@@ -233,7 +231,7 @@ pub fn iter_collect_n<'a>(
     for _ in 0..max {
         match itr.next().map(|g| g.into_inner()) {
             Some(Ok((k, v))) => {
-                items.push((make_binary(env, &k), make_binary(env, &v)));
+                items.push((crate::make_binary(env, &k), crate::make_binary(env, &v)));
             }
             Some(Err(e)) => {
                 return FjallError::from(e).encode(env);
@@ -253,14 +251,4 @@ pub fn iter_destroy(iter: ResourceArc<IterRsc>) -> rustler::Atom {
         *guard = None;
     }
     atom::ok()
-}
-
-////////////////////////////////////////////////////////////////////////////
-// Helpers                                                                //
-////////////////////////////////////////////////////////////////////////////
-
-fn make_binary<'a>(env: Env<'a>, data: &[u8]) -> Binary<'a> {
-    let mut bin = NewBinary::new(env, data.len());
-    bin.as_mut_slice().copy_from_slice(data);
-    bin.into()
 }
