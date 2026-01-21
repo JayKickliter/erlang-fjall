@@ -29,14 +29,20 @@ ok = fjall:commit(Tx).
 """.
 
 -export_type([
+    batch/0,
     compression/0,
     config_option/0,
+    db/0,
     direction/0,
+    iter/0,
+    ks/0,
     ks_option/0,
     persist_mode/0,
     range/0,
     result/0,
-    result/1
+    result/1,
+    snapshot/0,
+    tx/0
 ]).
 
 %% Flattened API - dispatch on tuple tags
@@ -198,17 +204,40 @@ Result type for operations that return a value on success.
 """.
 -type result(T) :: {ok, T} | {error, Reason :: term()}.
 
+-doc """
+Result type for operations that return a value on success, an error,
+or a sentinal.
+""".
+-type result(T, S) :: {ok, T} | {error, Reason :: term()} | S.
+
+-doc "Opaque handle to a database (plain or optimistic transactional).".
+-opaque db() :: {db, fjall_db:db()} | {otx_db, fjall_otx_db:otx_db()}.
+
+-doc "Opaque handle to a keyspace (plain or optimistic transactional).".
+-opaque ks() :: {ks, fjall_ks:ks()} | {otx_ks, fjall_otx_ks:otx_ks()}.
+
+-doc "Opaque handle to a write batch.".
+-opaque batch() :: {batch, fjall_wb:wb()}.
+
+-doc "Opaque handle to a write transaction.".
+-opaque tx() :: {tx, fjall_otx_tx:write_tx()}.
+
+-doc "Opaque handle to a database snapshot.".
+-opaque snapshot() :: {snapshot, fjall_snapshot:snapshot()}.
+
+-doc "Opaque handle to an iterator.".
+-opaque iter() :: {iter, fjall_iter:iter()}.
+
 %%--------------------------------------------------------------------------
 %% Database
 %%--------------------------------------------------------------------------
 
--spec open(Path :: file:name_all()) ->
-    result({db, fjall_db:db()} | {otx_db, fjall_otx_db:otx_db()}).
+-spec open(Path :: file:name_all()) -> result(db()).
 open(Path) ->
     open(Path, []).
 
 -spec open(Path :: file:name_all(), Options :: [config_option() | {optimistic, boolean()}]) ->
-    result({db, fjall_db:db()} | {otx_db, fjall_otx_db:otx_db()}).
+    result(db()).
 open(Path, Options) ->
     case proplists:get_value(optimistic, Options, false) of
         true ->
@@ -222,41 +251,36 @@ open(Path, Options) ->
             end
     end.
 
--spec batch({db, fjall_db:db()}) -> result({batch, fjall_wb:wb()}).
+-spec batch(db()) -> result(batch()).
 batch({db, Ref}) ->
     case fjall_db:batch(Ref) of
         {ok, BatchRef} -> {ok, {batch, BatchRef}};
         Err -> Err
     end.
 
--spec persist({db, fjall_db:db()} | {otx_db, fjall_otx_db:otx_db()}, Mode :: persist_mode()) ->
-    result().
+-spec persist(db(), Mode :: persist_mode()) -> result().
 persist({db, Ref}, Mode) ->
     fjall_db:persist(Ref, Mode);
 persist({otx_db, Ref}, Mode) ->
     fjall_otx_db:persist(Ref, Mode).
 
--spec keyspace({db, fjall_db:db()} | {otx_db, fjall_otx_db:otx_db()}, Name :: binary()) ->
-    result({ks, fjall_ks:ks()} | {otx_ks, fjall_otx_ks:otx_ks()}).
+-spec keyspace(db(), Name :: binary()) -> result(ks()).
 keyspace({db, Ref}, Name) ->
     wrap_ks(fjall_db:keyspace(Ref, Name));
 keyspace({otx_db, Ref}, Name) ->
     wrap_otx_ks(fjall_otx_db:keyspace(Ref, Name)).
 
--spec keyspace(
-    {db, fjall_db:db()} | {otx_db, fjall_otx_db:otx_db()}, Name :: binary(), Opts :: [ks_option()]
-) ->
-    result({ks, fjall_ks:ks()} | {otx_ks, fjall_otx_ks:otx_ks()}).
+-spec keyspace(db(), Name :: binary(), Opts :: [ks_option()]) -> result(ks()).
 keyspace({db, Ref}, Name, Opts) ->
     wrap_ks(fjall_db:keyspace(Ref, Name, Opts));
 keyspace({otx_db, Ref}, Name, Opts) ->
     wrap_otx_ks(fjall_otx_db:keyspace(Ref, Name, Opts)).
 
--spec write_tx({otx_db, fjall_otx_db:otx_db()}) -> result({tx, fjall_otx_tx:write_tx()}).
+-spec write_tx(db()) -> result(tx()).
 write_tx({otx_db, Ref}) ->
     wrap_tx(fjall_otx_db:write_tx(Ref)).
 
--spec snapshot({otx_db, fjall_otx_db:otx_db()}) -> result({snapshot, fjall_snapshot:snapshot()}).
+-spec snapshot(db()) -> result(snapshot()).
 snapshot({otx_db, Ref}) ->
     wrap_snapshot(fjall_otx_db:snapshot(Ref)).
 
@@ -264,86 +288,65 @@ snapshot({otx_db, Ref}) ->
 %% Key-Value Operations
 %%--------------------------------------------------------------------------
 
--spec get({ks, fjall_ks:ks()} | {otx_ks, fjall_otx_ks:otx_ks()}, Key :: binary()) ->
-    result(binary()) | not_found.
+-spec get(ks(), Key :: binary()) -> result(binary(), not_found).
 get({ks, Ref}, Key) ->
     fjall_ks:get(Ref, Key);
 get({otx_ks, Ref}, Key) ->
     fjall_otx_ks:get(Ref, Key).
 
 -spec get
-    ({tx, fjall_otx_tx:write_tx()}, {otx_ks, fjall_otx_ks:otx_ks()}, Key :: binary()) ->
-        result(binary());
-    ({snapshot, fjall_snapshot:snapshot()}, {otx_ks, fjall_otx_ks:otx_ks()}, Key :: binary()) ->
-        result(binary()) | not_found.
+    (tx(), ks(), Key :: binary()) -> result(binary());
+    (snapshot(), ks(), Key :: binary()) -> result(binary(), not_found).
 get({tx, TxRef}, {otx_ks, KsRef}, Key) ->
     fjall_otx_tx:get(TxRef, KsRef, Key);
 get({snapshot, SnapRef}, {otx_ks, KsRef}, Key) ->
     fjall_snapshot:get(SnapRef, KsRef, Key).
 
--spec insert(
-    {ks, fjall_ks:ks()} | {otx_ks, fjall_otx_ks:otx_ks()}, Key :: binary(), Value :: binary()
-) ->
-    result().
+-spec insert(ks(), Key :: binary(), Value :: binary()) -> result().
 insert({ks, Ref}, Key, Value) ->
     fjall_ks:insert(Ref, Key, Value);
 insert({otx_ks, Ref}, Key, Value) ->
     fjall_otx_ks:insert(Ref, Key, Value).
 
 -spec insert
-    ({batch, fjall_wb:wb()}, {ks, fjall_ks:ks()}, Key :: binary(), Value :: binary()) -> result();
-    (
-        {tx, fjall_otx_tx:write_tx()},
-        {otx_ks, fjall_otx_ks:otx_ks()},
-        Key :: binary(),
-        Value :: binary()
-    ) -> result().
+    (batch(), ks(), Key :: binary(), Value :: binary()) -> result();
+    (tx(), ks(), Key :: binary(), Value :: binary()) -> result().
 insert({batch, BRef}, {ks, KsRef}, Key, Value) ->
     fjall_wb:insert(BRef, KsRef, Key, Value);
 insert({tx, TxRef}, {otx_ks, KsRef}, Key, Value) ->
     fjall_otx_tx:insert(TxRef, KsRef, Key, Value).
 
--spec remove({ks, fjall_ks:ks()} | {otx_ks, fjall_otx_ks:otx_ks()}, Key :: binary()) -> result().
+-spec remove(ks(), Key :: binary()) -> result().
 remove({ks, Ref}, Key) ->
     fjall_ks:remove(Ref, Key);
 remove({otx_ks, Ref}, Key) ->
     fjall_otx_ks:remove(Ref, Key).
 
 -spec remove
-    ({batch, fjall_wb:wb()}, {ks, fjall_ks:ks()}, Key :: binary()) -> result();
-    ({tx, fjall_otx_tx:write_tx()}, {otx_ks, fjall_otx_ks:otx_ks()}, Key :: binary()) -> result().
+    (batch(), ks(), Key :: binary()) -> result();
+    (tx(), ks(), Key :: binary()) -> result().
 remove({batch, BRef}, {ks, KsRef}, Key) ->
     fjall_wb:remove(BRef, KsRef, Key);
 remove({tx, TxRef}, {otx_ks, KsRef}, Key) ->
     fjall_otx_tx:remove(TxRef, KsRef, Key).
 
--spec disk_space({ks, fjall_ks:ks()}) -> non_neg_integer().
+-spec disk_space(ks()) -> non_neg_integer().
 disk_space({ks, Ref}) ->
     fjall_ks:disk_space(Ref).
 
--spec iter(Ks, Direction) -> result({iter, fjall_iter:iter()}) when
-    Ks :: {ks, fjall_ks:ks()} | {otx_ks, fjall_otx_ks:otx_ks()},
-    Direction :: direction().
+-spec iter(ks(), direction()) -> result(iter()).
 iter({ks, Ref}, Direction) ->
     wrap_iter(fjall_ks:iter(Ref, Direction));
 iter({otx_ks, Ref}, Direction) ->
     wrap_iter(fjall_otx_ks:iter(Ref, Direction)).
 
--spec range(Ks, Direction, Range, Start, End) -> result({iter, fjall_iter:iter()}) when
-    Ks :: {ks, fjall_ks:ks()} | {otx_ks, fjall_otx_ks:otx_ks()},
-    Direction :: direction(),
-    Range :: range(),
-    Start :: binary(),
-    End :: binary().
+-spec range(ks(), direction(), range(), Start :: binary(), End :: binary()) -> result(iter()).
 range({ks, Ref}, Direction, Range, Start, End) ->
     wrap_iter(fjall_ks:range(Ref, Direction, Range, Start, End));
 range({otx_ks, Ref}, Direction, Range, Start, End) ->
     wrap_iter(fjall_otx_ks:range(Ref, Direction, Range, Start, End)).
 
--spec prefix(Ks, Direction, Prefix) -> result({iter, fjall_iter:iter()}) when
-    Ks :: {ks, fjall_ks:ks()} | {otx_ks, fjall_otx_ks:otx_ks()},
-    Direction :: direction(),
-    Prefix :: binary().
+-spec prefix(ks(), direction(), Prefix :: binary()) -> result(iter()).
 prefix({ks, Ref}, Direction, Prefix) ->
     wrap_iter(fjall_ks:prefix(Ref, Direction, Prefix));
 prefix({otx_ks, Ref}, Direction, Prefix) ->
@@ -353,25 +356,25 @@ prefix({otx_ks, Ref}, Direction, Prefix) ->
 %% Batch/Transaction
 %%--------------------------------------------------------------------------
 
--spec commit({batch, fjall_wb:wb()} | {tx, fjall_otx_tx:write_tx()}) -> result().
+-spec commit(batch() | tx()) -> result().
 commit({batch, Ref}) ->
     fjall_wb:commit(Ref);
 commit({tx, Ref}) ->
     fjall_otx_tx:commit(Ref).
 
--spec commit({batch, fjall_wb:wb()}, Mode :: persist_mode()) -> result().
+-spec commit(batch(), Mode :: persist_mode()) -> result().
 commit({batch, Ref}, Mode) ->
     fjall_wb:commit(Ref, Mode).
 
--spec len({batch, fjall_wb:wb()}) -> non_neg_integer().
+-spec len(batch()) -> non_neg_integer().
 len({batch, Ref}) ->
     fjall_wb:len(Ref).
 
--spec is_empty({batch, fjall_wb:wb()}) -> boolean().
+-spec is_empty(batch()) -> boolean().
 is_empty({batch, Ref}) ->
     fjall_wb:is_empty(Ref).
 
--spec rollback({tx, fjall_otx_tx:write_tx()}) -> result().
+-spec rollback(tx()) -> result().
 rollback({tx, Ref}) ->
     fjall_otx_tx:rollback(Ref).
 
@@ -380,35 +383,34 @@ rollback({tx, Ref}) ->
 %%--------------------------------------------------------------------------
 
 -spec take
-    ({otx_ks, fjall_otx_ks:otx_ks()}, Key :: binary()) -> result(binary());
-    ({iter, fjall_iter:iter()}, N :: pos_integer()) ->
-        {ok, [{binary(), binary()}]} | {error, term()}.
+    (ks(), Key :: binary()) -> result(binary());
+    (iter(), N :: pos_integer()) -> {ok, [{binary(), binary()}]} | {error, term()}.
 take({otx_ks, Ref}, Key) ->
     fjall_otx_ks:take(Ref, Key);
 take({iter, Ref}, N) ->
     fjall_iter:take(Ref, N).
 
--spec contains_key({otx_ks, fjall_otx_ks:otx_ks()}, Key :: binary()) -> result(boolean()).
+-spec contains_key(ks(), Key :: binary()) -> result(boolean()).
 contains_key({otx_ks, Ref}, Key) ->
     fjall_otx_ks:contains_key(Ref, Key).
 
--spec size_of({otx_ks, fjall_otx_ks:otx_ks()}, Key :: binary()) -> result(non_neg_integer()).
+-spec size_of(ks(), Key :: binary()) -> result(non_neg_integer()).
 size_of({otx_ks, Ref}, Key) ->
     fjall_otx_ks:size_of(Ref, Key).
 
--spec approximate_len({otx_ks, fjall_otx_ks:otx_ks()}) -> non_neg_integer().
+-spec approximate_len(ks()) -> non_neg_integer().
 approximate_len({otx_ks, Ref}) ->
     fjall_otx_ks:approximate_len(Ref).
 
--spec first_key_value({otx_ks, fjall_otx_ks:otx_ks()}) -> result({binary(), binary()}).
+-spec first_key_value(ks()) -> result({binary(), binary()}).
 first_key_value({otx_ks, Ref}) ->
     fjall_otx_ks:first_key_value(Ref).
 
--spec last_key_value({otx_ks, fjall_otx_ks:otx_ks()}) -> result({binary(), binary()}).
+-spec last_key_value(ks()) -> result({binary(), binary()}).
 last_key_value({otx_ks, Ref}) ->
     fjall_otx_ks:last_key_value(Ref).
 
--spec path({otx_ks, fjall_otx_ks:otx_ks()}) -> binary().
+-spec path(ks()) -> binary().
 path({otx_ks, Ref}) ->
     fjall_otx_ks:path(Ref).
 
@@ -416,15 +418,15 @@ path({otx_ks, Ref}) ->
 %% Iterators
 %%--------------------------------------------------------------------------
 
--spec next({iter, fjall_iter:iter()}) -> {ok, {binary(), binary()}} | done | {error, term()}.
+-spec next(iter()) -> {ok, {binary(), binary()}} | done | {error, term()}.
 next({iter, Ref}) ->
     fjall_iter:next(Ref).
 
--spec collect({iter, fjall_iter:iter()}) -> {ok, [{binary(), binary()}]} | {error, term()}.
+-spec collect(iter()) -> {ok, [{binary(), binary()}]} | {error, term()}.
 collect({iter, Ref}) ->
     fjall_iter:collect(Ref).
 
--spec destroy({iter, fjall_iter:iter()}) -> ok.
+-spec destroy(iter()) -> ok.
 destroy({iter, Ref}) ->
     fjall_iter:destroy(Ref).
 
@@ -432,27 +434,26 @@ destroy({iter, Ref}) ->
 %% Helper Functions (private)
 %%--------------------------------------------------------------------------
 
--spec wrap_ks(result(fjall_ks:ks())) -> result({ks, fjall_ks:ks()}).
+-spec wrap_ks(result(fjall_ks:ks())) -> result(ks()).
 wrap_ks({ok, Ref}) -> {ok, {ks, Ref}};
 wrap_ks(Err) -> Err.
 
--spec wrap_iter(result(fjall_iter:iter())) -> result({iter, fjall_iter:iter()}).
+-spec wrap_iter(result(fjall_iter:iter())) -> result(iter()).
 wrap_iter({ok, Ref}) -> {ok, {iter, Ref}};
 wrap_iter(Err) -> Err.
 
--spec wrap_otx_db(result(fjall_otx_db:otx_db())) -> result({otx_db, fjall_otx_db:otx_db()}).
+-spec wrap_otx_db(result(fjall_otx_db:otx_db())) -> result(db()).
 wrap_otx_db({ok, Ref}) -> {ok, {otx_db, Ref}};
 wrap_otx_db(Err) -> Err.
 
--spec wrap_otx_ks(result(fjall_otx_ks:otx_ks())) -> result({otx_ks, fjall_otx_ks:otx_ks()}).
+-spec wrap_otx_ks(result(fjall_otx_ks:otx_ks())) -> result(ks()).
 wrap_otx_ks({ok, Ref}) -> {ok, {otx_ks, Ref}};
 wrap_otx_ks(Err) -> Err.
 
--spec wrap_tx(result(fjall_otx_tx:write_tx())) -> result({tx, fjall_otx_tx:write_tx()}).
+-spec wrap_tx(result(fjall_otx_tx:write_tx())) -> result(tx()).
 wrap_tx({ok, Ref}) -> {ok, {tx, Ref}};
 wrap_tx(Err) -> Err.
 
--spec wrap_snapshot(result(fjall_snapshot:snapshot())) ->
-    result({snapshot, fjall_snapshot:snapshot()}).
+-spec wrap_snapshot(result(fjall_snapshot:snapshot())) -> result(snapshot()).
 wrap_snapshot({ok, Ref}) -> {ok, {snapshot, Ref}};
 wrap_snapshot(Err) -> Err.
