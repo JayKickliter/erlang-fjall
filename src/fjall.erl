@@ -233,10 +233,12 @@ or a sentinal.
 %% Database
 %%--------------------------------------------------------------------------
 
+-doc "Opens a database at `Path` with default options.".
 -spec open(Path :: file:name_all()) -> result(db()).
 open(Path) ->
     open(Path, []).
 
+-doc "Opens a database at `Path` with `Options`.".
 -spec open(Path :: file:name_all(), Options :: [config_option() | {optimistic, boolean()}]) ->
     result(db()).
 open(Path, Options) ->
@@ -252,6 +254,7 @@ open(Path, Options) ->
             end
     end.
 
+-doc "Creates a write batch for atomic multi-keyspace writes.".
 -spec batch(db()) -> result(batch()).
 batch({db, Ref}) ->
     case fjall_db:batch(Ref) of
@@ -259,28 +262,33 @@ batch({db, Ref}) ->
         Err -> Err
     end.
 
+-doc "Persists the database journal with the given `Mode`.".
 -spec persist(db(), Mode :: persist_mode()) -> result().
 persist({db, Ref}, Mode) ->
     fjall_db:persist(Ref, Mode);
 persist({otx_db, Ref}, Mode) ->
     fjall_otx_db:persist(Ref, Mode).
 
+-doc "Opens or creates a keyspace with `Name`.".
 -spec keyspace(db(), Name :: binary()) -> result(ks()).
 keyspace({db, Ref}, Name) ->
     wrap_ks(fjall_db:keyspace(Ref, Name));
 keyspace({otx_db, Ref}, Name) ->
     wrap_otx_ks(fjall_otx_db:keyspace(Ref, Name)).
 
+-doc "Opens or creates a keyspace with `Name` and `Opts`.".
 -spec keyspace(db(), Name :: binary(), Opts :: [ks_option()]) -> result(ks()).
 keyspace({db, Ref}, Name, Opts) ->
     wrap_ks(fjall_db:keyspace(Ref, Name, Opts));
 keyspace({otx_db, Ref}, Name, Opts) ->
     wrap_otx_ks(fjall_otx_db:keyspace(Ref, Name, Opts)).
 
+-doc "Creates an optimistic write transaction.".
 -spec write_tx(db()) -> result(tx()).
 write_tx({otx_db, Ref}) ->
     wrap_tx(fjall_otx_db:write_tx(Ref)).
 
+-doc "Creates a point-in-time snapshot for consistent reads.".
 -spec snapshot(db()) -> result(snapshot()).
 snapshot({otx_db, Ref}) ->
     wrap_snapshot(fjall_otx_db:snapshot(Ref)).
@@ -289,12 +297,14 @@ snapshot({otx_db, Ref}) ->
 %% Key-Value Operations
 %%--------------------------------------------------------------------------
 
+-doc "Returns the value for `Key`, or `not_found` if it doesn't exist.".
 -spec get(ks(), Key :: binary()) -> result(binary(), not_found).
 get({ks, Ref}, Key) ->
     fjall_ks:get(Ref, Key);
 get({otx_ks, Ref}, Key) ->
     fjall_otx_ks:get(Ref, Key).
 
+-doc "Returns the value for `Key` within a transaction or snapshot.".
 -spec get
     (tx(), ks(), Key :: binary()) -> result(binary());
     (snapshot(), ks(), Key :: binary()) -> result(binary(), not_found).
@@ -303,12 +313,14 @@ get({tx, TxRef}, {otx_ks, KsRef}, Key) ->
 get({snapshot, SnapRef}, {otx_ks, KsRef}, Key) ->
     fjall_snapshot:get(SnapRef, KsRef, Key).
 
+-doc "Inserts or updates `Key` with `Value`.".
 -spec insert(ks(), Key :: binary(), Value :: binary()) -> result().
 insert({ks, Ref}, Key, Value) ->
     fjall_ks:insert(Ref, Key, Value);
 insert({otx_ks, Ref}, Key, Value) ->
     fjall_otx_ks:insert(Ref, Key, Value).
 
+-doc "Inserts or updates `Key` with `Value` within a batch or transaction.".
 -spec insert
     (batch(), ks(), Key :: binary(), Value :: binary()) -> result();
     (tx(), ks(), Key :: binary(), Value :: binary()) -> result().
@@ -317,12 +329,14 @@ insert({batch, BRef}, {ks, KsRef}, Key, Value) ->
 insert({tx, TxRef}, {otx_ks, KsRef}, Key, Value) ->
     fjall_otx_tx:insert(TxRef, KsRef, Key, Value).
 
+-doc "Removes `Key` from the keyspace.".
 -spec remove(ks(), Key :: binary()) -> result().
 remove({ks, Ref}, Key) ->
     fjall_ks:remove(Ref, Key);
 remove({otx_ks, Ref}, Key) ->
     fjall_otx_ks:remove(Ref, Key).
 
+-doc "Removes `Key` from the keyspace within a batch or transaction.".
 -spec remove
     (batch(), ks(), Key :: binary()) -> result();
     (tx(), ks(), Key :: binary()) -> result().
@@ -331,50 +345,38 @@ remove({batch, BRef}, {ks, KsRef}, Key) ->
 remove({tx, TxRef}, {otx_ks, KsRef}, Key) ->
     fjall_otx_tx:remove(TxRef, KsRef, Key).
 
+-doc "Returns the approximate disk space used by the keyspace in bytes.".
 -spec disk_space(ks()) -> non_neg_integer().
 disk_space({ks, Ref}) ->
     fjall_ks:disk_space(Ref).
-
--spec iter(ks(), direction()) -> result(iter()).
-iter({ks, Ref}, Direction) ->
-    fjall_ks:iter(Ref, Direction);
-iter({otx_ks, Ref}, Direction) ->
-    fjall_otx_ks:iter(Ref, Direction).
-
--spec iter(ks(), direction(), Prefix :: binary()) -> result(iter()).
-iter({ks, Ref}, Direction, Prefix) ->
-    fjall_ks:iter(Ref, Direction, Prefix);
-iter({otx_ks, Ref}, Direction, Prefix) ->
-    fjall_otx_ks:iter(Ref, Direction, Prefix).
-
--spec iter(ks(), direction(), range(), {Start :: binary(), End :: binary()}) -> result(iter()).
-iter({ks, Ref}, Direction, Range, {Start, End}) ->
-    fjall_ks:iter(Ref, Direction, Range, {Start, End});
-iter({otx_ks, Ref}, Direction, Range, {Start, End}) ->
-    fjall_otx_ks:iter(Ref, Direction, Range, {Start, End}).
 
 %%--------------------------------------------------------------------------
 %% Batch/Transaction
 %%--------------------------------------------------------------------------
 
+-doc "Commits a batch or transaction.".
 -spec commit(batch() | tx()) -> result().
 commit({batch, Ref}) ->
     fjall_wb:commit(Ref);
 commit({tx, Ref}) ->
     fjall_otx_tx:commit(Ref).
 
+-doc "Commits a batch with the given persist `Mode`.".
 -spec commit(batch(), Mode :: persist_mode()) -> result().
 commit({batch, Ref}, Mode) ->
     fjall_wb:commit(Ref, Mode).
 
+-doc "Returns the number of operations in the batch.".
 -spec len(batch()) -> non_neg_integer().
 len({batch, Ref}) ->
     fjall_wb:len(Ref).
 
+-doc "Returns `true` if the batch contains no operations.".
 -spec is_empty(batch()) -> boolean().
 is_empty({batch, Ref}) ->
     fjall_wb:is_empty(Ref).
 
+-doc "Rolls back a transaction, discarding all changes.".
 -spec rollback(tx()) -> result().
 rollback({tx, Ref}) ->
     fjall_otx_tx:rollback(Ref).
@@ -383,40 +385,47 @@ rollback({tx, Ref}) ->
 %% Keyspace Info
 %%--------------------------------------------------------------------------
 
+-doc "Removes and returns the value for `Key`. Only available on transactional keyspaces.".
 -spec take(ks(), Key :: binary()) -> result(binary()).
 take({otx_ks, Ref}, Key) ->
     fjall_otx_ks:take(Ref, Key).
 
+-doc "Returns `true` if `Key` exists in the keyspace.".
 -spec contains_key(ks(), Key :: binary()) -> result(boolean()).
 contains_key({ks, Ref}, Key) ->
     fjall_ks:contains_key(Ref, Key);
 contains_key({otx_ks, Ref}, Key) ->
     fjall_otx_ks:contains_key(Ref, Key).
 
+-doc "Returns the size of the value for `Key` in bytes.".
 -spec size_of(ks(), Key :: binary()) -> result(non_neg_integer()).
 size_of({ks, Ref}, Key) ->
     fjall_ks:size_of(Ref, Key);
 size_of({otx_ks, Ref}, Key) ->
     fjall_otx_ks:size_of(Ref, Key).
 
+-doc "Returns the approximate number of key-value pairs in the keyspace.".
 -spec approximate_len(ks()) -> non_neg_integer().
 approximate_len({ks, Ref}) ->
     fjall_ks:approximate_len(Ref);
 approximate_len({otx_ks, Ref}) ->
     fjall_otx_ks:approximate_len(Ref).
 
+-doc "Returns the first key-value pair in the keyspace.".
 -spec first_key_value(ks()) -> result({binary(), binary()}).
 first_key_value({ks, Ref}) ->
     fjall_ks:first_key_value(Ref);
 first_key_value({otx_ks, Ref}) ->
     fjall_otx_ks:first_key_value(Ref).
 
+-doc "Returns the last key-value pair in the keyspace.".
 -spec last_key_value(ks()) -> result({binary(), binary()}).
 last_key_value({ks, Ref}) ->
     fjall_ks:last_key_value(Ref);
 last_key_value({otx_ks, Ref}) ->
     fjall_otx_ks:last_key_value(Ref).
 
+-doc "Returns the filesystem path to the keyspace directory.".
 -spec path(ks()) -> binary().
 path({ks, Ref}) ->
     fjall_ks:path(Ref);
@@ -427,18 +436,43 @@ path({otx_ks, Ref}) ->
 %% Iterators
 %%--------------------------------------------------------------------------
 
+-doc "Creates an iterator over all key-value pairs in the keyspace.".
+-spec iter(ks(), direction()) -> result(iter()).
+iter({ks, Ref}, Direction) ->
+    fjall_ks:iter(Ref, Direction);
+iter({otx_ks, Ref}, Direction) ->
+    fjall_otx_ks:iter(Ref, Direction).
+
+-doc "Creates an iterator over keys matching `Prefix`.".
+-spec iter(ks(), direction(), Prefix :: binary()) -> result(iter()).
+iter({ks, Ref}, Direction, Prefix) ->
+    fjall_ks:iter(Ref, Direction, Prefix);
+iter({otx_ks, Ref}, Direction, Prefix) ->
+    fjall_otx_ks:iter(Ref, Direction, Prefix).
+
+-doc "Creates an iterator over keys in the range `{Start, End}`.".
+-spec iter(ks(), direction(), range(), {Start :: binary(), End :: binary()}) -> result(iter()).
+iter({ks, Ref}, Direction, Range, {Start, End}) ->
+    fjall_ks:iter(Ref, Direction, Range, {Start, End});
+iter({otx_ks, Ref}, Direction, Range, {Start, End}) ->
+    fjall_otx_ks:iter(Ref, Direction, Range, {Start, End}).
+
+-doc "Returns the next key-value pair from the iterator, or `done` if exhausted.".
 -spec next(iter()) -> {ok, {binary(), binary()}} | done | {error, term()}.
 next(Iter) ->
     fjall_iter:next(Iter).
 
+-doc "Returns a list of all remaining key-value pairs from the iterator.".
 -spec collect(iter()) -> {ok, [{binary(), binary()}]} | {error, term()}.
 collect(Iter) ->
     fjall_iter:collect(Iter).
 
+-doc "Returns a list of up to `N` key-value pairs from the iterator.".
 -spec collect(iter(), pos_integer()) -> {ok, [{binary(), binary()}]} | {error, term()}.
 collect(Iter, N) ->
     fjall_iter:collect(Iter, N).
 
+-doc "Destroys the iterator. Call this to release resources without waiting for GC.".
 -spec destroy(iter()) -> ok.
 destroy(Iter) ->
     fjall_iter:destroy(Iter).
