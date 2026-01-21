@@ -116,17 +116,17 @@ range_test() ->
     ok = fjall:insert(Ks, <<"d">>, <<"4">>),
 
     % Exclusive range [b, d) - half-open interval
-    {ok, Iter1} = fjall:range(Ks, <<"b">>, <<"d">>, forward, exclusive),
+    {ok, Iter1} = fjall:range(Ks, forward, exclusive, <<"b">>, <<"d">>),
     {ok, Items1} = fjall:collect(Iter1),
     [{<<"b">>, <<"2">>}, {<<"c">>, <<"3">>}] = Items1,
 
     % Exclusive range with reverse
-    {ok, Iter2} = fjall:range(Ks, <<"b">>, <<"d">>, reverse, exclusive),
+    {ok, Iter2} = fjall:range(Ks, reverse, exclusive, <<"b">>, <<"d">>),
     {ok, Items2} = fjall:collect(Iter2),
     [{<<"c">>, <<"3">>}, {<<"b">>, <<"2">>}] = Items2,
 
     % Inclusive range [b, d] - closed interval
-    {ok, Iter3} = fjall:range(Ks, <<"b">>, <<"d">>, forward, inclusive),
+    {ok, Iter3} = fjall:range(Ks, forward, inclusive, <<"b">>, <<"d">>),
     {ok, Items3} = fjall:collect(Iter3),
     [{<<"b">>, <<"2">>}, {<<"c">>, <<"3">>}, {<<"d">>, <<"4">>}] = Items3,
 
@@ -142,12 +142,12 @@ prefix_test() ->
     ok = fjall:insert(Ks, <<"order:1">>, <<"pizza">>),
 
     % Prefix scan
-    {ok, Iter1} = fjall:prefix(Ks, <<"user:">>, forward),
+    {ok, Iter1} = fjall:prefix(Ks, forward, <<"user:">>),
     {ok, Items1} = fjall:collect(Iter1),
     [{<<"user:1">>, <<"alice">>}, {<<"user:2">>, <<"bob">>}] = Items1,
 
     % Prefix with reverse
-    {ok, Iter2} = fjall:prefix(Ks, <<"user:">>, reverse),
+    {ok, Iter2} = fjall:prefix(Ks, reverse, <<"user:">>),
     {ok, Items2} = fjall:collect(Iter2),
     [{<<"user:2">>, <<"bob">>}, {<<"user:1">>, <<"alice">>}] = Items2,
 

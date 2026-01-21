@@ -329,25 +329,25 @@ iter({ks, Ref}, Direction) ->
 iter({otx_ks, Ref}, Direction) ->
     wrap_iter(fjall_otx_ks:iter(Ref, Direction)).
 
--spec range(Ks, Start, End, Direction, Range) -> result({iter, fjall_iter:iter()}) when
+-spec range(Ks, Direction, Range, Start, End) -> result({iter, fjall_iter:iter()}) when
     Ks :: {ks, fjall_ks:ks()} | {otx_ks, fjall_otx_ks:otx_ks()},
-    Start :: binary(),
-    End :: binary(),
     Direction :: direction(),
-    Range :: range().
-range({ks, Ref}, Start, End, Direction, Range) ->
-    wrap_iter(fjall_ks:range(Ref, Start, End, Direction, Range));
-range({otx_ks, Ref}, Start, End, Direction, Range) ->
-    wrap_iter(fjall_otx_ks:range(Ref, Start, End, Direction, Range)).
+    Range :: range(),
+    Start :: binary(),
+    End :: binary().
+range({ks, Ref}, Direction, Range, Start, End) ->
+    wrap_iter(fjall_ks:range(Ref, Direction, Range, Start, End));
+range({otx_ks, Ref}, Direction, Range, Start, End) ->
+    wrap_iter(fjall_otx_ks:range(Ref, Direction, Range, Start, End)).
 
--spec prefix(Ks, Prefix, Direction) -> result({iter, fjall_iter:iter()}) when
+-spec prefix(Ks, Direction, Prefix) -> result({iter, fjall_iter:iter()}) when
     Ks :: {ks, fjall_ks:ks()} | {otx_ks, fjall_otx_ks:otx_ks()},
-    Prefix :: binary(),
-    Direction :: direction().
-prefix({ks, Ref}, Prefix, Direction) ->
-    wrap_iter(fjall_ks:prefix(Ref, Prefix, Direction));
-prefix({otx_ks, Ref}, Prefix, Direction) ->
-    wrap_iter(fjall_otx_ks:prefix(Ref, Prefix, Direction)).
+    Direction :: direction(),
+    Prefix :: binary().
+prefix({ks, Ref}, Direction, Prefix) ->
+    wrap_iter(fjall_ks:prefix(Ref, Direction, Prefix));
+prefix({otx_ks, Ref}, Direction, Prefix) ->
+    wrap_iter(fjall_otx_ks:prefix(Ref, Direction, Prefix)).
 
 %%--------------------------------------------------------------------------
 %% Batch/Transaction

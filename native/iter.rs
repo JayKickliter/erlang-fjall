@@ -3,7 +3,9 @@ use crate::{
     ks::KsRsc,
     otx_ks::OtxKsRsc,
 };
-use rustler::{Binary, Encoder, Env, NewBinary, Resource, ResourceArc, Term};
+use rustler::{
+    Atom, Binary, Decoder, Encoder, Env, NewBinary, NifResult, Resource, ResourceArc, Term,
+};
 use std::sync::Mutex;
 
 mod atoms {
@@ -27,7 +29,6 @@ enum IterInner {
 
 impl Iterator for IterInner {
     type Item = fjall::Guard;
-
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             IterInner::Forward(iter) => iter.next(),
@@ -41,20 +42,59 @@ pub struct IterRsc(Mutex<Option<IterInner>>);
 #[rustler::resource_impl]
 impl Resource for IterRsc {}
 
+enum Direction {
+    Forward,
+    Reverse,
+}
+
+impl<'a> Decoder<'a> for Direction {
+    fn decode(term: Term<'a>) -> NifResult<Direction> {
+        let err =
+            || rustler::Error::Term(Box::new("expected atom 'forward' | 'reverse'".to_owned()));
+        let atom: Atom = term.decode().map_err(|_| err())?;
+        if atom == atoms::forward() {
+            Ok(Direction::Forward)
+        } else if atom == atoms::reverse() {
+            Ok(Direction::Reverse)
+        } else {
+            Err(err())
+        }
+    }
+}
+
+enum Range {
+    Inclusive,
+    Exclusive,
+}
+
+impl<'a> Decoder<'a> for Range {
+    fn decode(term: Term<'a>) -> NifResult<Range> {
+        let err = || {
+            rustler::Error::Term(Box::new(
+                "expected atom 'inclusive' | 'exclusive'".to_owned(),
+            ))
+        };
+        let atom: Atom = term.decode().map_err(|_| err())?;
+        if atom == atoms::inclusive() {
+            Ok(Range::Inclusive)
+        } else if atom == atoms::exclusive() {
+            Ok(Range::Exclusive)
+        } else {
+            Err(err())
+        }
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////
 // Iterator Creation - Plain Keyspace                                     //
 ////////////////////////////////////////////////////////////////////////////
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn ks_iter(
-    ks: ResourceArc<KsRsc>,
-    direction: rustler::Atom,
-) -> FjallResult<ResourceArc<IterRsc>> {
+pub fn ks_iter(ks: ResourceArc<KsRsc>, direction: Direction) -> FjallResult<ResourceArc<IterRsc>> {
     let iter = ks.0.iter();
-    let inner = if direction == atoms::reverse() {
-        IterInner::Reverse(iter.rev())
-    } else {
-        IterInner::Forward(iter)
+    let inner = match direction {
+        Direction::Forward => IterInner::Forward(iter),
+        Direction::Reverse => IterInner::Reverse(iter.rev()),
     };
     FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner))))))
 }
@@ -62,40 +102,32 @@ pub fn ks_iter(
 #[rustler::nif(schedule = "DirtyIo")]
 pub fn ks_range(
     ks: ResourceArc<KsRsc>,
+    direction: Direction,
+    range: Range,
     start: rustler::Binary,
     end: rustler::Binary,
-    direction: rustler::Atom,
-    range: rustler::Atom,
 ) -> FjallResult<ResourceArc<IterRsc>> {
-    let inner = if range == atoms::inclusive() {
-        let iter = ks.0.range(start.as_slice()..=end.as_slice());
-        if direction == atoms::reverse() {
-            IterInner::Reverse(iter.rev())
-        } else {
-            IterInner::Forward(iter)
-        }
-    } else {
-        let iter = ks.0.range(start.as_slice()..end.as_slice());
-        if direction == atoms::reverse() {
-            IterInner::Reverse(iter.rev())
-        } else {
-            IterInner::Forward(iter)
-        }
+    let raw_iter = match range {
+        Range::Inclusive => ks.0.range(start.as_slice()..=end.as_slice()),
+        Range::Exclusive => ks.0.range(start.as_slice()..end.as_slice()),
     };
-    FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner))))))
+    let iter = match direction {
+        Direction::Forward => IterInner::Forward(raw_iter),
+        Direction::Reverse => IterInner::Reverse(raw_iter.rev()),
+    };
+    FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(iter))))))
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
 pub fn ks_prefix(
     ks: ResourceArc<KsRsc>,
+    direction: Direction,
     prefix: rustler::Binary,
-    direction: rustler::Atom,
 ) -> FjallResult<ResourceArc<IterRsc>> {
     let iter = ks.0.prefix(prefix.as_slice());
-    let inner = if direction == atoms::reverse() {
-        IterInner::Reverse(iter.rev())
-    } else {
-        IterInner::Forward(iter)
+    let inner = match direction {
+        Direction::Forward => IterInner::Forward(iter),
+        Direction::Reverse => IterInner::Reverse(iter.rev()),
     };
     FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner))))))
 }
@@ -107,14 +139,13 @@ pub fn ks_prefix(
 #[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_ks_iter(
     ks: ResourceArc<OtxKsRsc>,
-    direction: rustler::Atom,
+    direction: Direction,
 ) -> FjallResult<ResourceArc<IterRsc>> {
     let keyspace: &fjall::Keyspace = ks.0.as_ref();
     let iter = keyspace.iter();
-    let inner = if direction == atoms::reverse() {
-        IterInner::Reverse(iter.rev())
-    } else {
-        IterInner::Forward(iter)
+    let inner = match direction {
+        Direction::Forward => IterInner::Forward(iter),
+        Direction::Reverse => IterInner::Reverse(iter.rev()),
     };
     FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner))))))
 }
@@ -122,42 +153,34 @@ pub fn otx_ks_iter(
 #[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_ks_range(
     ks: ResourceArc<OtxKsRsc>,
+    direction: Direction,
+    range: Range,
     start: rustler::Binary,
     end: rustler::Binary,
-    direction: rustler::Atom,
-    range: rustler::Atom,
 ) -> FjallResult<ResourceArc<IterRsc>> {
     let keyspace: &fjall::Keyspace = ks.0.as_ref();
-    let inner = if range == atoms::inclusive() {
-        let iter = keyspace.range(start.as_slice()..=end.as_slice());
-        if direction == atoms::reverse() {
-            IterInner::Reverse(iter.rev())
-        } else {
-            IterInner::Forward(iter)
-        }
-    } else {
-        let iter = keyspace.range(start.as_slice()..end.as_slice());
-        if direction == atoms::reverse() {
-            IterInner::Reverse(iter.rev())
-        } else {
-            IterInner::Forward(iter)
-        }
+    let raw_iter = match range {
+        Range::Inclusive => keyspace.range(start.as_slice()..=end.as_slice()),
+        Range::Exclusive => keyspace.range(start.as_slice()..end.as_slice()),
     };
-    FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner))))))
+    let iter = match direction {
+        Direction::Forward => IterInner::Forward(raw_iter),
+        Direction::Reverse => IterInner::Reverse(raw_iter.rev()),
+    };
+    FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(iter))))))
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_ks_prefix(
     ks: ResourceArc<OtxKsRsc>,
+    direction: Direction,
     prefix: rustler::Binary,
-    direction: rustler::Atom,
 ) -> FjallResult<ResourceArc<IterRsc>> {
     let keyspace: &fjall::Keyspace = ks.0.as_ref();
     let iter = keyspace.prefix(prefix.as_slice());
-    let inner = if direction == atoms::reverse() {
-        IterInner::Reverse(iter.rev())
-    } else {
-        IterInner::Forward(iter)
+    let inner = match direction {
+        Direction::Forward => IterInner::Forward(iter),
+        Direction::Reverse => IterInner::Reverse(iter.rev()),
     };
     FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner))))))
 }

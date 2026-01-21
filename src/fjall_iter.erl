@@ -13,8 +13,8 @@
 -doc """
 Opaque handle to a keyspace iterator.
 
-Iterators are created using `fjall_ks:iter/1`, `fjall_ks:range/3`,
-`fjall_ks:prefix/2` or their equivalents in `fjall_otx_ks`.
+Iterators are created using `fjall_ks:iter/2`, `fjall_ks:range/5`,
+`fjall_ks:prefix/3` or their equivalents in `fjall_otx_ks`.
 """.
 -nominal iter() :: reference().
 
@@ -32,7 +32,7 @@ iterator is exhausted, or `{error, Reason}` on failure.
 ## Example
 
 ```erlang
-{ok, Iter} = fjall_ks:iter(Keyspace),
+{ok, Iter} = fjall_ks:iter(Keyspace, forward),
 case fjall_iter:next(Iter) of
     {ok, {Key, Value}} ->
         io:format("Key: ~s, Value: ~s~n", [Key, Value]);
@@ -53,7 +53,7 @@ empty if iterator is exhausted), or `{error, Reason}` on failure.
 ## Example
 
 ```erlang
-{ok, Iter} = fjall_ks:iter(Keyspace),
+{ok, Iter} = fjall_ks:iter(Keyspace, forward),
 {ok, Items} = fjall_iter:take(Iter, 10),
 lists:foreach(fun({K, V}) -> io:format("~s: ~s~n", [K, V]) end, Items)
 ```
@@ -70,7 +70,7 @@ pairs, or `{error, Reason}` on failure.
 ## Example
 
 ```erlang
-{ok, Iter} = fjall_ks:prefix(Keyspace, <<"user:">>),
+{ok, Iter} = fjall_ks:prefix(Keyspace, <<"user:">>, forward),
 {ok, Items} = fjall_iter:collect(Iter),
 io:format("Found ~p items~n", [length(Items)])
 ```
@@ -89,7 +89,7 @@ Returns `ok`.
 ## Example
 
 ```erlang
-{ok, Iter} = fjall_ks:iter(Keyspace),
+{ok, Iter} = fjall_ks:iter(Keyspace, forward),
 {ok, _} = fjall_iter:take(Iter, 10),
 ok = fjall_iter:destroy(Iter)
 ```
