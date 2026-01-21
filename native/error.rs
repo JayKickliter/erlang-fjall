@@ -51,8 +51,6 @@ impl From<rustler::Error> for FjallError {
     }
 }
 
-impl std::panic::RefUnwindSafe for FjallError {}
-
 impl Encoder for FjallError {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         match self {
@@ -80,13 +78,13 @@ impl Encoder for FjallError {
     }
 }
 
+impl std::panic::RefUnwindSafe for FjallError {}
+
 ////////////////////////////////////////////////////////////////////////////
 // Result Wrapper for Erlang Encoding                                    //
 ////////////////////////////////////////////////////////////////////////////
 
 pub struct FjallResult<T>(pub Result<T, FjallError>);
-
-impl<T: std::panic::RefUnwindSafe> std::panic::RefUnwindSafe for FjallResult<T> {}
 
 impl<T: Encoder> Encoder for FjallResult<T> {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
@@ -100,8 +98,6 @@ impl<T: Encoder> Encoder for FjallResult<T> {
 // Wrapper for operations that return just ok or error (not {ok, Value})
 pub struct FjallOkResult(pub Result<(), FjallError>);
 
-impl std::panic::RefUnwindSafe for FjallOkResult {}
-
 impl Encoder for FjallOkResult {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         match &self.0 {
@@ -113,8 +109,6 @@ impl Encoder for FjallOkResult {
 
 // Wrapper for get operations that return binary data
 pub struct FjallBinaryResult(pub Result<Vec<u8>, FjallError>);
-
-impl std::panic::RefUnwindSafe for FjallBinaryResult {}
 
 impl Encoder for FjallBinaryResult {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
@@ -143,8 +137,6 @@ impl Encoder for FjallBinaryResult {
 
 // Wrapper for operations that return a key-value pair as binaries
 pub struct FjallKvResult(pub Result<(Vec<u8>, Vec<u8>), FjallError>);
-
-impl std::panic::RefUnwindSafe for FjallKvResult {}
 
 impl Encoder for FjallKvResult {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
