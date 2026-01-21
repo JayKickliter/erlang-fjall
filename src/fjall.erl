@@ -78,10 +78,11 @@ ok = fjall:commit(Tx).
 
     %% Iterators
     iter/2,
-    range/5,
-    prefix/3,
+    iter/3,
+    iter/4,
     next/1,
     collect/1,
+    collect/2,
     destroy/1
 ]).
 
@@ -226,7 +227,7 @@ or a sentinal.
 -opaque snapshot() :: {snapshot, fjall_snapshot:snapshot()}.
 
 -doc "Opaque handle to an iterator.".
--opaque iter() :: {iter, fjall_iter:iter()}.
+-opaque iter() :: fjall_iter:iter().
 
 %%--------------------------------------------------------------------------
 %% Database
@@ -336,21 +337,21 @@ disk_space({ks, Ref}) ->
 
 -spec iter(ks(), direction()) -> result(iter()).
 iter({ks, Ref}, Direction) ->
-    wrap_iter(fjall_ks:iter(Ref, Direction));
+    fjall_ks:iter(Ref, Direction);
 iter({otx_ks, Ref}, Direction) ->
-    wrap_iter(fjall_otx_ks:iter(Ref, Direction)).
+    fjall_otx_ks:iter(Ref, Direction).
 
--spec range(ks(), direction(), range(), Start :: binary(), End :: binary()) -> result(iter()).
-range({ks, Ref}, Direction, Range, Start, End) ->
-    wrap_iter(fjall_ks:range(Ref, Direction, Range, Start, End));
-range({otx_ks, Ref}, Direction, Range, Start, End) ->
-    wrap_iter(fjall_otx_ks:range(Ref, Direction, Range, Start, End)).
+-spec iter(ks(), direction(), Prefix :: binary()) -> result(iter()).
+iter({ks, Ref}, Direction, Prefix) ->
+    fjall_ks:iter(Ref, Direction, Prefix);
+iter({otx_ks, Ref}, Direction, Prefix) ->
+    fjall_otx_ks:iter(Ref, Direction, Prefix).
 
--spec prefix(ks(), direction(), Prefix :: binary()) -> result(iter()).
-prefix({ks, Ref}, Direction, Prefix) ->
-    wrap_iter(fjall_ks:prefix(Ref, Direction, Prefix));
-prefix({otx_ks, Ref}, Direction, Prefix) ->
-    wrap_iter(fjall_otx_ks:prefix(Ref, Direction, Prefix)).
+-spec iter(ks(), direction(), range(), {Start :: binary(), End :: binary()}) -> result(iter()).
+iter({ks, Ref}, Direction, Range, {Start, End}) ->
+    fjall_ks:iter(Ref, Direction, Range, {Start, End});
+iter({otx_ks, Ref}, Direction, Range, {Start, End}) ->
+    fjall_otx_ks:iter(Ref, Direction, Range, {Start, End}).
 
 %%--------------------------------------------------------------------------
 %% Batch/Transaction
@@ -382,13 +383,9 @@ rollback({tx, Ref}) ->
 %% Keyspace Info
 %%--------------------------------------------------------------------------
 
--spec take
-    (ks(), Key :: binary()) -> result(binary());
-    (iter(), N :: pos_integer()) -> {ok, [{binary(), binary()}]} | {error, term()}.
+-spec take(ks(), Key :: binary()) -> result(binary()).
 take({otx_ks, Ref}, Key) ->
-    fjall_otx_ks:take(Ref, Key);
-take({iter, Ref}, N) ->
-    fjall_iter:take(Ref, N).
+    fjall_otx_ks:take(Ref, Key).
 
 -spec contains_key(ks(), Key :: binary()) -> result(boolean()).
 contains_key({ks, Ref}, Key) ->
@@ -431,16 +428,20 @@ path({otx_ks, Ref}) ->
 %%--------------------------------------------------------------------------
 
 -spec next(iter()) -> {ok, {binary(), binary()}} | done | {error, term()}.
-next({iter, Ref}) ->
-    fjall_iter:next(Ref).
+next(Iter) ->
+    fjall_iter:next(Iter).
 
 -spec collect(iter()) -> {ok, [{binary(), binary()}]} | {error, term()}.
-collect({iter, Ref}) ->
-    fjall_iter:collect(Ref).
+collect(Iter) ->
+    fjall_iter:collect(Iter).
+
+-spec collect(iter(), pos_integer()) -> {ok, [{binary(), binary()}]} | {error, term()}.
+collect(Iter, N) ->
+    fjall_iter:collect(Iter, N).
 
 -spec destroy(iter()) -> ok.
-destroy({iter, Ref}) ->
-    fjall_iter:destroy(Ref).
+destroy(Iter) ->
+    fjall_iter:destroy(Iter).
 
 %%--------------------------------------------------------------------------
 %% Helper Functions (private)
@@ -449,10 +450,6 @@ destroy({iter, Ref}) ->
 -spec wrap_ks(result(fjall_ks:ks())) -> result(ks()).
 wrap_ks({ok, Ref}) -> {ok, {ks, Ref}};
 wrap_ks(Err) -> Err.
-
--spec wrap_iter(result(fjall_iter:iter())) -> result(iter()).
-wrap_iter({ok, Ref}) -> {ok, {iter, Ref}};
-wrap_iter(Err) -> Err.
 
 -spec wrap_otx_db(result(fjall_otx_db:otx_db())) -> result(db()).
 wrap_otx_db({ok, Ref}) -> {ok, {otx_db, Ref}};

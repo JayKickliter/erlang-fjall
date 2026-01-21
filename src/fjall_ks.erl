@@ -23,8 +23,8 @@ in the Rust documentation.
     last_key_value/1,
     path/1,
     iter/2,
-    range/5,
-    prefix/3
+    iter/3,
+    iter/4
 ]).
 
 -export_type([ks/0]).
@@ -306,21 +306,21 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 
 ```erlang
 %% Exclusive range [a, d) - returns "a", "b", "c" but not "d"
-{ok, Iter1} = fjall_ks:range(Keyspace, forward, exclusive, <<"a">>, <<"d">>),
+{ok, Iter1} = fjall_ks:iter(Keyspace, forward, exclusive, {<<"a">>, <<"d">>}),
 
 %% Inclusive range [a, d] - returns "a", "b", "c", "d"
-{ok, Iter2} = fjall_ks:range(Keyspace, forward, inclusive, <<"a">>, <<"d">>),
+{ok, Iter2} = fjall_ks:iter(Keyspace, forward, inclusive, {<<"a">>, <<"d">>}),
 
 %% Reverse order
-{ok, Iter3} = fjall_ks:range(Keyspace, reverse, exclusive, <<"a">>, <<"d">>)
+{ok, Iter3} = fjall_ks:iter(Keyspace, reverse, exclusive, {<<"a">>, <<"d">>})
 ```
 
 See [Keyspace::range](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.range)
 in the Rust documentation.
 """.
--spec range(ks(), fjall:direction(), fjall:range(), Start :: binary(), End :: binary()) ->
+-spec iter(ks(), fjall:direction(), fjall:range(), {Start :: binary(), End :: binary()}) ->
     fjall:result(fjall_iter:iter()).
-range(Ks, Direction, Range, Start, End) -> fjall_nif:ks_range(Ks, Direction, Range, Start, End).
+iter(Ks, Direction, Range, {Start, End}) -> fjall_nif:ks_range(Ks, Direction, Range, Start, End).
 
 -doc """
 Creates an iterator over keys with a given prefix.
@@ -330,7 +330,7 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 ## Example
 
 ```erlang
-{ok, Iter} = fjall_ks:prefix(Keyspace, forward, <<"user:">>),
+{ok, Iter} = fjall_ks:iter(Keyspace, forward, <<"user:">>),
 {ok, Items} = fjall_iter:collect(Iter)
 %% Returns all items with keys starting with "user:"
 ```
@@ -338,5 +338,5 @@ Returns `{ok, Iterator}` on success or `{error, Reason}` on failure.
 See [Keyspace::prefix](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.prefix)
 in the Rust documentation.
 """.
--spec prefix(ks(), fjall:direction(), binary()) -> fjall:result(fjall_iter:iter()).
-prefix(Ks, Direction, Prefix) -> fjall_nif:ks_prefix(Ks, Direction, Prefix).
+-spec iter(ks(), fjall:direction(), Prefix :: binary()) -> fjall:result(fjall_iter:iter()).
+iter(Ks, Direction, Prefix) -> fjall_nif:ks_prefix(Ks, Direction, Prefix).

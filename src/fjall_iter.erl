@@ -3,8 +3,8 @@
 
 -export([
     next/1,
-    take/2,
     collect/1,
+    collect/2,
     destroy/1
 ]).
 
@@ -13,8 +13,8 @@
 -doc """
 Opaque handle to a keyspace iterator.
 
-Iterators are created using `fjall_ks:iter/2`, `fjall_ks:range/5`,
-`fjall_ks:prefix/3` or their equivalents in `fjall_otx_ks`.
+Iterators are created using `fjall_ks:iter/2`, `fjall_ks:iter/3` (prefix),
+or `fjall_ks:iter/4` (range) and their equivalents in `fjall_otx_ks`.
 """.
 -nominal iter() :: reference().
 
@@ -45,7 +45,7 @@ end
 next(Iter) -> fjall_nif:iter_next(Iter).
 
 -doc """
-Takes up to N items from the iterator.
+Collects up to N items from the iterator.
 
 Returns `{ok, Items}` where Items is a list of key-value pairs (may be
 empty if iterator is exhausted), or `{error, Reason}` on failure.
@@ -54,12 +54,12 @@ empty if iterator is exhausted), or `{error, Reason}` on failure.
 
 ```erlang
 {ok, Iter} = fjall_ks:iter(Keyspace, forward),
-{ok, Items} = fjall_iter:take(Iter, 10),
+{ok, Items} = fjall_iter:collect(Iter, 10),
 lists:foreach(fun({K, V}) -> io:format("~s: ~s~n", [K, V]) end, Items)
 ```
 """.
--spec take(iter(), pos_integer()) -> {ok, [kv()]} | {error, term()}.
-take(Iter, N) -> fjall_nif:iter_collect(Iter, N).
+-spec collect(iter(), pos_integer()) -> {ok, [kv()]} | {error, term()}.
+collect(Iter, N) -> fjall_nif:iter_collect(Iter, N).
 
 -doc """
 Collects all remaining items from the iterator.
@@ -70,7 +70,7 @@ pairs, or `{error, Reason}` on failure.
 ## Example
 
 ```erlang
-{ok, Iter} = fjall_ks:prefix(Keyspace, <<"user:">>, forward),
+{ok, Iter} = fjall_ks:iter(Keyspace, forward, <<"user:">>),
 {ok, Items} = fjall_iter:collect(Iter),
 io:format("Found ~p items~n", [length(Items)])
 ```
@@ -90,7 +90,7 @@ Returns `ok`.
 
 ```erlang
 {ok, Iter} = fjall_ks:iter(Keyspace, forward),
-{ok, _} = fjall_iter:take(Iter, 10),
+{ok, _} = fjall_iter:collect(Iter, 10),
 ok = fjall_iter:destroy(Iter)
 ```
 """.
