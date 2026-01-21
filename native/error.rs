@@ -51,8 +51,6 @@ impl From<rustler::Error> for FjallError {
     }
 }
 
-impl std::panic::RefUnwindSafe for FjallError {}
-
 impl Encoder for FjallError {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         match self {
@@ -80,13 +78,13 @@ impl Encoder for FjallError {
     }
 }
 
+impl std::panic::RefUnwindSafe for FjallError {}
+
 ////////////////////////////////////////////////////////////////////////////
 // Result Wrapper for Erlang Encoding                                    //
 ////////////////////////////////////////////////////////////////////////////
 
 pub struct FjallResult<T>(pub Result<T, FjallError>);
-
-impl<T: std::panic::RefUnwindSafe> std::panic::RefUnwindSafe for FjallResult<T> {}
 
 impl<T: Encoder> Encoder for FjallResult<T> {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
@@ -100,42 +98,10 @@ impl<T: Encoder> Encoder for FjallResult<T> {
 // Wrapper for operations that return just ok or error (not {ok, Value})
 pub struct FjallOkResult(pub Result<(), FjallError>);
 
-impl std::panic::RefUnwindSafe for FjallOkResult {}
-
 impl Encoder for FjallOkResult {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         match &self.0 {
             Ok(()) => atom::ok().encode(env),
-            Err(err) => err.encode(env),
-        }
-    }
-}
-
-// Wrapper for get operations that return binary data
-pub struct FjallBinaryResult(pub Result<Vec<u8>, FjallError>);
-
-impl std::panic::RefUnwindSafe for FjallBinaryResult {}
-
-impl Encoder for FjallBinaryResult {
-    fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
-        match &self.0 {
-            Ok(data) => {
-                // Create a binary from the Vec<u8> by encoding it as a binary slice
-                match rustler::OwnedBinary::new(data.len()) {
-                    Some(mut owned_bin) => {
-                        owned_bin.as_mut_slice().copy_from_slice(data);
-                        (atom::ok(), owned_bin.release(env)).encode(env)
-                    }
-                    None => {
-                        // Fallback: encode as empty binary if allocation fails
-                        (
-                            atom::ok(),
-                            rustler::OwnedBinary::new(0).unwrap().release(env),
-                        )
-                            .encode(env)
-                    }
-                }
-            }
             Err(err) => err.encode(env),
         }
     }

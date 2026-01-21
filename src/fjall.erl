@@ -391,26 +391,38 @@ take({iter, Ref}, N) ->
     fjall_iter:take(Ref, N).
 
 -spec contains_key(ks(), Key :: binary()) -> result(boolean()).
+contains_key({ks, Ref}, Key) ->
+    fjall_ks:contains_key(Ref, Key);
 contains_key({otx_ks, Ref}, Key) ->
     fjall_otx_ks:contains_key(Ref, Key).
 
 -spec size_of(ks(), Key :: binary()) -> result(non_neg_integer()).
+size_of({ks, Ref}, Key) ->
+    fjall_ks:size_of(Ref, Key);
 size_of({otx_ks, Ref}, Key) ->
     fjall_otx_ks:size_of(Ref, Key).
 
 -spec approximate_len(ks()) -> non_neg_integer().
+approximate_len({ks, Ref}) ->
+    fjall_ks:approximate_len(Ref);
 approximate_len({otx_ks, Ref}) ->
     fjall_otx_ks:approximate_len(Ref).
 
 -spec first_key_value(ks()) -> result({binary(), binary()}).
+first_key_value({ks, Ref}) ->
+    fjall_ks:first_key_value(Ref);
 first_key_value({otx_ks, Ref}) ->
     fjall_otx_ks:first_key_value(Ref).
 
 -spec last_key_value(ks()) -> result({binary(), binary()}).
+last_key_value({ks, Ref}) ->
+    fjall_ks:last_key_value(Ref);
 last_key_value({otx_ks, Ref}) ->
     fjall_otx_ks:last_key_value(Ref).
 
 -spec path(ks()) -> binary().
+path({ks, Ref}) ->
+    fjall_ks:path(Ref);
 path({otx_ks, Ref}) ->
     fjall_otx_ks:path(Ref).
 

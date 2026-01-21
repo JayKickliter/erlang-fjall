@@ -15,7 +15,13 @@ in the Rust documentation.
     get/2,
     insert/3,
     remove/2,
+    contains_key/2,
+    size_of/2,
     disk_space/1,
+    approximate_len/1,
+    first_key_value/1,
+    last_key_value/1,
+    path/1,
     iter/2,
     range/5,
     prefix/3
@@ -122,6 +128,152 @@ in the Rust documentation.
 -spec disk_space(Keyspace :: ks()) -> non_neg_integer().
 disk_space(Keyspace) ->
     fjall_nif:ks_disk_space(Keyspace).
+
+-doc """
+Checks if a key exists in the keyspace.
+
+Returns `{ok, true}` if the key exists, `{ok, false}` otherwise.
+
+## Example
+
+```erlang
+{ok, Exists} = fjall_ks:contains_key(Keyspace, <<"alice">>),
+case Exists of
+    true -> io:format("Alice exists~n");
+    false -> io:format("Alice does not exist~n")
+end
+```
+
+See [Keyspace::contains_key](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.contains_key)
+in the Rust documentation.
+""".
+-spec contains_key(Keyspace :: ks(), Key :: binary()) ->
+    fjall:result(boolean()).
+contains_key(Keyspace, Key) ->
+    fjall_nif:ks_contains_key(Keyspace, Key).
+
+-doc """
+Returns the size of the value for a key in bytes.
+
+Returns `{ok, Size}` if the key exists, or `{error, not_found}` if not.
+
+## Errors
+
+- `{error, not_found}` - Key does not exist in the keyspace
+
+## Example
+
+```erlang
+case fjall_ks:size_of(Keyspace, <<"alice">>) of
+    {ok, Size} ->
+        io:format("Alice's value is ~p bytes~n", [Size]);
+    {error, not_found} ->
+        io:format("Alice not found~n")
+end
+```
+
+See [Keyspace::size_of](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.size_of)
+in the Rust documentation.
+""".
+-spec size_of(Keyspace :: ks(), Key :: binary()) ->
+    fjall:result(non_neg_integer()).
+size_of(Keyspace, Key) ->
+    fjall_nif:ks_size_of(Keyspace, Key).
+
+-doc """
+Returns the approximate number of key-value pairs in the keyspace.
+
+This is an estimate and may not be exact due to pending compactions
+and tombstones.
+
+## Example
+
+```erlang
+Count = fjall_ks:approximate_len(Keyspace),
+io:format("Keyspace has approximately ~p items~n", [Count])
+```
+
+See [Keyspace::approximate_len](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.approximate_len)
+in the Rust documentation.
+""".
+-spec approximate_len(Keyspace :: ks()) -> non_neg_integer().
+approximate_len(Keyspace) ->
+    fjall_nif:ks_approximate_len(Keyspace).
+
+-doc """
+Returns the first key-value pair in the keyspace (by key order).
+
+Returns `{ok, {Key, Value}}` if the keyspace is not empty, or
+`{error, not_found}` if the keyspace is empty.
+
+## Errors
+
+- `{error, not_found}` - Keyspace is empty
+
+## Example
+
+```erlang
+case fjall_ks:first_key_value(Keyspace) of
+    {ok, {Key, Value}} ->
+        io:format("First entry: ~s => ~s~n", [Key, Value]);
+    {error, not_found} ->
+        io:format("Keyspace is empty~n")
+end
+```
+
+See [Keyspace::first_key_value](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.first_key_value)
+in the Rust documentation.
+""".
+-spec first_key_value(Keyspace :: ks()) ->
+    fjall:result({binary(), binary()}).
+first_key_value(Keyspace) ->
+    fjall_nif:ks_first_key_value(Keyspace).
+
+-doc """
+Returns the last key-value pair in the keyspace (by key order).
+
+Returns `{ok, {Key, Value}}` if the keyspace is not empty, or
+`{error, not_found}` if the keyspace is empty.
+
+## Errors
+
+- `{error, not_found}` - Keyspace is empty
+
+## Example
+
+```erlang
+case fjall_ks:last_key_value(Keyspace) of
+    {ok, {Key, Value}} ->
+        io:format("Last entry: ~s => ~s~n", [Key, Value]);
+    {error, not_found} ->
+        io:format("Keyspace is empty~n")
+end
+```
+
+See [Keyspace::last_key_value](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.last_key_value)
+in the Rust documentation.
+""".
+-spec last_key_value(Keyspace :: ks()) ->
+    fjall:result({binary(), binary()}).
+last_key_value(Keyspace) ->
+    fjall_nif:ks_last_key_value(Keyspace).
+
+-doc """
+Returns the path to the keyspace directory on disk.
+
+## Example
+
+```erlang
+Path = fjall_ks:path(Keyspace),
+io:format("Keyspace path: ~s~n", [Path])
+```
+
+See [Keyspace::path](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.path)
+in the Rust documentation.
+""".
+-spec path(Keyspace :: ks()) -> binary().
+path(Keyspace) ->
+    fjall_nif:ks_path(Keyspace).
 
 -doc """
 Creates an iterator over all key-value pairs in the keyspace.

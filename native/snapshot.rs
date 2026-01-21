@@ -1,8 +1,9 @@
 use crate::{
-    error::{FjallBinaryResult, FjallError, FjallRes},
+    error::{FjallError, FjallRes, FjallResult},
+    make_binary,
     otx_ks::OtxKsRsc,
 };
-use rustler::{Resource, ResourceArc};
+use rustler::{Encoder, Env, Resource, ResourceArc, Term};
 
 ////////////////////////////////////////////////////////////////////////////
 // Snapshot Resource                                                      //
@@ -22,11 +23,12 @@ impl Resource for SnapshotRsc {}
 ////////////////////////////////////////////////////////////////////////////
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn snapshot_get(
+pub fn snapshot_get<'a>(
+    env: Env<'a>,
     snapshot: ResourceArc<SnapshotRsc>,
     ks: ResourceArc<OtxKsRsc>,
     key: rustler::Binary,
-) -> FjallBinaryResult {
+) -> FjallResult<Term<'a>> {
     let result = (|| {
         use fjall::Readable;
         let val = snapshot
@@ -34,9 +36,9 @@ pub fn snapshot_get(
             .get(&ks.0, key.as_slice())
             .to_erlang_result()?;
         match val {
-            Some(value) => Ok(value.to_vec()),
+            Some(value) => Ok(make_binary(env, &value).encode(env)),
             None => Err(FjallError::NotFound),
         }
     })();
-    FjallBinaryResult(result)
+    FjallResult(result)
 }

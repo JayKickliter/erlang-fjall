@@ -1,9 +1,10 @@
 use crate::{
-    error::{FjallBinaryResult, FjallError, FjallOkResult, FjallRes},
+    error::{FjallError, FjallOkResult, FjallRes, FjallResult},
+    make_binary,
     otx_db::OtxDbRsc,
     otx_ks::OtxKsRsc,
 };
-use rustler::{Resource, ResourceArc};
+use rustler::{Encoder, Env, Resource, ResourceArc, Term};
 use std::sync::Mutex;
 
 ////////////////////////////////////////////////////////////////////////////
@@ -74,20 +75,21 @@ pub fn otx_tx_insert(
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-pub fn otx_tx_get(
+pub fn otx_tx_get<'a>(
+    env: Env<'a>,
     txn: ResourceArc<WriteTxRsc>,
     ks: ResourceArc<OtxKsRsc>,
     key: rustler::Binary,
-) -> FjallBinaryResult {
+) -> FjallResult<Term<'a>> {
     let result = txn.with_txn_mut(|t| {
         use fjall::Readable;
         let val = t.get(&ks.0, key.as_slice()).to_erlang_result()?;
         match val {
-            Some(value) => Ok(value.to_vec()),
+            Some(value) => Ok(make_binary(env, &value).encode(env)),
             None => Err(FjallError::NotFound),
         }
     });
-    FjallBinaryResult(result)
+    FjallResult(result)
 }
 
 #[rustler::nif]

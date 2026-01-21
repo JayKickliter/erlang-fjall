@@ -1,10 +1,12 @@
 use crate::{
     error::{atom, FjallError, FjallResult},
     ks::KsRsc,
+    make_binary,
     otx_ks::OtxKsRsc,
 };
 use rustler::{
-    Atom, Binary, Decoder, Encoder, Env, NewBinary, NifResult, Resource, ResourceArc, Term,
+    types::tuple::make_tuple, Atom, Binary, Decoder, Encoder, Env, NifResult, Resource,
+    ResourceArc, Term,
 };
 use std::sync::Mutex;
 
@@ -198,12 +200,13 @@ pub fn iter_next<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>) -> Term<'a> {
     match itr.next().map(|g| g.into_inner()) {
         None => {
             *guard = None;
-            atoms::done().encode(env)
+            atoms::done().to_term(env)
         }
         Some(Ok((k, v))) => {
-            let k = make_binary(env, &k);
-            let v = make_binary(env, &v);
-            (atom::ok(), (k, v)).encode(env)
+            let k = make_binary(env, &k).to_term(env);
+            let v = make_binary(env, &v).to_term(env);
+            let kv = make_tuple(env, &[k, v]);
+            make_tuple(env, &[atom::ok().to_term(env), kv])
         }
         Some(Err(e)) => FjallError::from(e).encode(env),
     }
@@ -229,11 +232,14 @@ pub fn iter_collect_n<'a>(
         return (atom::ok(), Vec::<(Binary, Binary)>::new()).encode(env);
     };
     let max = limit.filter(|&n| n > 0).unwrap_or(usize::MAX);
-    let mut items: Vec<(Binary<'a>, Binary<'a>)> = Vec::new();
+    let mut items: Vec<Term<'a>> = Vec::new();
     for _ in 0..max {
         match itr.next().map(|g| g.into_inner()) {
             Some(Ok((k, v))) => {
-                items.push((make_binary(env, &k), make_binary(env, &v)));
+                let k = make_binary(env, &k).to_term(env);
+                let v = make_binary(env, &v).to_term(env);
+                let kv = make_tuple(env, &[k, v]);
+                items.push(kv);
             }
             Some(Err(e)) => {
                 return FjallError::from(e).encode(env);
@@ -253,14 +259,4 @@ pub fn iter_destroy(iter: ResourceArc<IterRsc>) -> rustler::Atom {
         *guard = None;
     }
     atom::ok()
-}
-
-////////////////////////////////////////////////////////////////////////////
-// Helpers                                                                //
-////////////////////////////////////////////////////////////////////////////
-
-fn make_binary<'a>(env: Env<'a>, data: &[u8]) -> Binary<'a> {
-    let mut bin = NewBinary::new(env, data.len());
-    bin.as_mut_slice().copy_from_slice(data);
-    bin.into()
 }
