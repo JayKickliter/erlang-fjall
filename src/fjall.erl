@@ -68,6 +68,7 @@ ok = fjall:commit(Tx).
 
     %% Keyspace info
     take/2,
+    clear/1,
     contains_key/2,
     size_of/2,
     disk_space/1,
@@ -388,6 +389,11 @@ rollback({tx, Ref}) ->
 -spec take(ks(), Key :: binary()) -> result(binary()).
 take({otx_ks, Ref}, Key) ->
     fjall_otx_ks:take(Ref, Key).
+
+-doc "Clears the entire keyspace.".
+-spec clear(ks()) -> result().
+clear({ks, Ref}) ->
+    fjall_ks:clear(Ref).
 
 -doc "Returns `true` if `Key` exists in the keyspace.".
 -spec contains_key(ks(), Key :: binary()) -> result(boolean()).

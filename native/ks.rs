@@ -64,6 +64,12 @@ pub fn ks_disk_space(ks: ResourceArc<KsRsc>) -> u64 {
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
+pub fn ks_clear(ks: ResourceArc<KsRsc>) -> FjallOkResult {
+    let result = ks.0.clear().to_erlang_result();
+    FjallOkResult(result)
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn ks_contains_key(ks: ResourceArc<KsRsc>, key: rustler::Binary) -> FjallResult<bool> {
     let result = ks.0.contains_key(key.as_slice()).to_erlang_result();
     FjallResult(result)
