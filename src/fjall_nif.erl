@@ -13,6 +13,7 @@
 
     % fjall_ks NIFs
     ks_approximate_len/1,
+    ks_clear/1,
     ks_contains_key/2,
     ks_disk_space/1,
     ks_first_key_value/1,
@@ -100,6 +101,8 @@ ks_insert(_Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 ks_remove(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec ks_disk_space(Ks :: fjall_ks:ks()) -> non_neg_integer().
 ks_disk_space(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec ks_clear(Ks :: fjall_ks:ks()) -> fjall:result().
+ks_clear(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec ks_contains_key(Ks :: fjall_ks:ks(), Key :: binary()) -> fjall:result(boolean()).
 ks_contains_key(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec ks_size_of(Ks :: fjall_ks:ks(), Key :: binary()) -> fjall:result(non_neg_integer()).

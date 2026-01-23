@@ -15,6 +15,7 @@ in the Rust documentation.
     get/2,
     insert/3,
     remove/2,
+    clear/1,
     contains_key/2,
     size_of/2,
     disk_space/1,
@@ -109,6 +110,16 @@ in the Rust documentation.
 -spec remove(Keyspace :: ks(), Key :: binary()) -> fjall:result().
 remove(Keyspace, Key) ->
     fjall_nif:ks_remove(Keyspace, Key).
+
+-doc """
+Clears the entire keyspace in O(1) time.
+
+See [Keyspace::clear](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.clear)
+in the Rust documentation.
+""".
+-spec clear(Keyspace :: ks()) -> fjall:result().
+clear(Keyspace) ->
+    fjall_nif:ks_clear(Keyspace).
 
 -doc """
 Returns the approximate disk space used by the keyspace in bytes.

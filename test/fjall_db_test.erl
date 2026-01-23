@@ -225,6 +225,32 @@ iter_destroy_test() ->
 
     ok.
 
+clear_test() ->
+    DbPath = test_db_path("clear"),
+    {ok, Db} = fjall:open(DbPath, [{temporary, true}]),
+    {ok, Ks} = fjall:keyspace(Db, <<"test">>),
+
+    % Insert test data
+    ok = fjall:insert(Ks, <<"a">>, <<"1">>),
+    ok = fjall:insert(Ks, <<"b">>, <<"2">>),
+    ok = fjall:insert(Ks, <<"c">>, <<"3">>),
+
+    % Verify data exists
+    {ok, <<"1">>} = fjall:get(Ks, <<"a">>),
+    {ok, <<"2">>} = fjall:get(Ks, <<"b">>),
+    {ok, <<"3">>} = fjall:get(Ks, <<"c">>),
+
+    % Clear the keyspace
+    ok = fjall:clear(Ks),
+
+    % Verify keyspace is empty
+    not_found = fjall:get(Ks, <<"a">>),
+    not_found = fjall:get(Ks, <<"b">>),
+    not_found = fjall:get(Ks, <<"c">>),
+    {error, not_found} = fjall:first_key_value(Ks),
+
+    ok.
+
 keyspace_info_test() ->
     DbPath = test_db_path("keyspace_info"),
     {ok, Db} = fjall:open(DbPath, [{temporary, true}]),
