@@ -213,37 +213,64 @@ pub fn iter_next<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>) -> Term<'a> {
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
+pub fn iter_collect_keys<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>) -> Term<'a> {
+    iter_collect_n(env, iter, None, Keep::Key)
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
+pub fn iter_collect_keys<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>, limit: usize) -> Term<'a> {
+    iter_collect_n(env, iter, Some(limit), Keep::Key)
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
+pub fn iter_collect_values<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>) -> Term<'a> {
+    iter_collect_n(env, iter, None, Keep::Val)
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
+pub fn iter_collect_values<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>, limit: usize) -> Term<'a> {
+    iter_collect_n(env, iter, Some(limit), Keep::Val)
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn iter_collect<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>, limit: usize) -> Term<'a> {
-    iter_collect_n(env, iter, Some(limit))
+    iter_collect_n(env, iter, Some(limit), Keep::KeyVal)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
 pub fn iter_collect<'a>(env: Env<'a>, iter: ResourceArc<IterRsc>) -> Term<'a> {
-    iter_collect_n(env, iter, None)
+    iter_collect_n(env, iter, None, Keep::KeyVal)
 }
 
-pub fn iter_collect_n<'a>(
+////////////////////////////////////////////////////////////////////////////
+// Helpers                                                                //
+////////////////////////////////////////////////////////////////////////////
+
+// What to keep when collecting a KV iterator.
+enum Keep {
+    KeyVal,
+    Key,
+    Val,
+}
+
+fn iter_collect_n<'a>(
     env: Env<'a>,
     iter: ResourceArc<IterRsc>,
     limit: Option<usize>,
+    keep: Keep,
 ) -> Term<'a> {
     let mut guard = iter.0.lock().unwrap();
     let Some(itr) = guard.as_mut() else {
         return (atom::ok(), Vec::<(Binary, Binary)>::new()).encode(env);
     };
-    let max = limit.filter(|&n| n > 0).unwrap_or(usize::MAX);
+    let max = limit.unwrap_or(usize::MAX);
     let mut items: Vec<Term<'a>> = Vec::new();
     for _ in 0..max {
-        match itr.next().map(|g| g.into_inner()) {
-            Some(Ok((k, v))) => {
-                let k = make_binary(env, &k).to_term(env);
-                let v = make_binary(env, &v).to_term(env);
-                let kv = make_tuple(env, &[k, v]);
-                items.push(kv);
-            }
-            Some(Err(e)) => {
-                return FjallError::from(e).encode(env);
-            }
+        match itr.next() {
+            Some(g) => match kv_to_term(env, &keep, g) {
+                Ok(term) => items.push(term),
+                Err(e) => return e.encode(env),
+            },
             None => {
                 *guard = None;
                 break;
@@ -251,6 +278,24 @@ pub fn iter_collect_n<'a>(
         }
     }
     (atom::ok(), items).encode(env)
+}
+
+fn kv_to_term<'a>(env: Env<'a>, keep: &Keep, guard: fjall::Guard) -> Result<Term<'a>, FjallError> {
+    let term = match keep {
+        Keep::KeyVal => {
+            let (k, v) = guard.into_inner()?;
+            make_tuple(
+                env,
+                &[
+                    make_binary(env, &k).to_term(env),
+                    make_binary(env, &v).to_term(env),
+                ],
+            )
+        }
+        Keep::Key => make_binary(env, &guard.key()?).to_term(env),
+        Keep::Val => make_binary(env, &guard.value()?).to_term(env),
+    };
+    Ok(term)
 }
 
 #[rustler::nif]

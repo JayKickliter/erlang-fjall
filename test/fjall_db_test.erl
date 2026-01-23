@@ -87,8 +87,8 @@ iter_next_test() ->
 
     ok.
 
-iter_take_test() ->
-    DbPath = test_db_path("iter_take"),
+iter_collect_test() ->
+    DbPath = test_db_path("iter_collect"),
     {ok, Db} = fjall:open(DbPath, [{temporary, true}]),
     {ok, Ks} = fjall:keyspace(Db, <<"test">>),
 
@@ -97,11 +97,69 @@ iter_take_test() ->
     ok = fjall:insert(Ks, <<"c">>, <<"3">>),
 
     {ok, Iter} = fjall:iter(Ks, forward),
-    {ok, Items1} = fjall:take(Iter, 2),
+    {ok, Items1} = fjall:collect(Iter, 2),
     [{<<"a">>, <<"1">>}, {<<"b">>, <<"2">>}] = Items1,
-    {ok, Items2} = fjall:take(Iter, 2),
+    {ok, Items2} = fjall:collect(Iter, 2),
     [{<<"c">>, <<"3">>}] = Items2,
-    {ok, []} = fjall:take(Iter, 2),
+    {ok, []} = fjall:collect(Iter, 2),
+
+    ok.
+
+iter_collect_keys_test() ->
+    DbPath = test_db_path("iter_collect_keys"),
+    {ok, Db} = fjall:open(DbPath, [{temporary, true}]),
+    {ok, Ks} = fjall:keyspace(Db, <<"test">>),
+
+    ok = fjall:insert(Ks, <<"a">>, <<"1">>),
+    ok = fjall:insert(Ks, <<"b">>, <<"2">>),
+    ok = fjall:insert(Ks, <<"c">>, <<"3">>),
+
+    % collect_keys/1 - all keys
+    {ok, Iter1} = fjall:iter(Ks, forward),
+    {ok, Keys1} = fjall:collect_keys(Iter1),
+    [<<"a">>, <<"b">>, <<"c">>] = Keys1,
+
+    % collect_keys/2 - with limit
+    {ok, Iter2} = fjall:iter(Ks, forward),
+    {ok, Keys2} = fjall:collect_keys(Iter2, 2),
+    [<<"a">>, <<"b">>] = Keys2,
+    {ok, Keys3} = fjall:collect_keys(Iter2, 2),
+    [<<"c">>] = Keys3,
+    {ok, []} = fjall:collect_keys(Iter2, 2),
+
+    % collect_keys with reverse
+    {ok, Iter3} = fjall:iter(Ks, reverse),
+    {ok, Keys4} = fjall:collect_keys(Iter3),
+    [<<"c">>, <<"b">>, <<"a">>] = Keys4,
+
+    ok.
+
+iter_collect_values_test() ->
+    DbPath = test_db_path("iter_collect_values"),
+    {ok, Db} = fjall:open(DbPath, [{temporary, true}]),
+    {ok, Ks} = fjall:keyspace(Db, <<"test">>),
+
+    ok = fjall:insert(Ks, <<"a">>, <<"1">>),
+    ok = fjall:insert(Ks, <<"b">>, <<"2">>),
+    ok = fjall:insert(Ks, <<"c">>, <<"3">>),
+
+    % collect_values/1 - all values
+    {ok, Iter1} = fjall:iter(Ks, forward),
+    {ok, Values1} = fjall:collect_values(Iter1),
+    [<<"1">>, <<"2">>, <<"3">>] = Values1,
+
+    % collect_values/2 - with limit
+    {ok, Iter2} = fjall:iter(Ks, forward),
+    {ok, Values2} = fjall:collect_values(Iter2, 2),
+    [<<"1">>, <<"2">>] = Values2,
+    {ok, Values3} = fjall:collect_values(Iter2, 2),
+    [<<"3">>] = Values3,
+    {ok, []} = fjall:collect_values(Iter2, 2),
+
+    % collect_values with reverse
+    {ok, Iter3} = fjall:iter(Ks, reverse),
+    {ok, Values4} = fjall:collect_values(Iter3),
+    [<<"3">>, <<"2">>, <<"1">>] = Values4,
 
     ok.
 
@@ -116,17 +174,17 @@ range_test() ->
     ok = fjall:insert(Ks, <<"d">>, <<"4">>),
 
     % Exclusive range [b, d) - half-open interval
-    {ok, Iter1} = fjall:range(Ks, forward, exclusive, <<"b">>, <<"d">>),
+    {ok, Iter1} = fjall:iter(Ks, forward, exclusive, {<<"b">>, <<"d">>}),
     {ok, Items1} = fjall:collect(Iter1),
     [{<<"b">>, <<"2">>}, {<<"c">>, <<"3">>}] = Items1,
 
     % Exclusive range with reverse
-    {ok, Iter2} = fjall:range(Ks, reverse, exclusive, <<"b">>, <<"d">>),
+    {ok, Iter2} = fjall:iter(Ks, reverse, exclusive, {<<"b">>, <<"d">>}),
     {ok, Items2} = fjall:collect(Iter2),
     [{<<"c">>, <<"3">>}, {<<"b">>, <<"2">>}] = Items2,
 
     % Inclusive range [b, d] - closed interval
-    {ok, Iter3} = fjall:range(Ks, forward, inclusive, <<"b">>, <<"d">>),
+    {ok, Iter3} = fjall:iter(Ks, forward, inclusive, {<<"b">>, <<"d">>}),
     {ok, Items3} = fjall:collect(Iter3),
     [{<<"b">>, <<"2">>}, {<<"c">>, <<"3">>}, {<<"d">>, <<"4">>}] = Items3,
 
@@ -142,12 +200,12 @@ prefix_test() ->
     ok = fjall:insert(Ks, <<"order:1">>, <<"pizza">>),
 
     % Prefix scan
-    {ok, Iter1} = fjall:prefix(Ks, forward, <<"user:">>),
+    {ok, Iter1} = fjall:iter(Ks, forward, <<"user:">>),
     {ok, Items1} = fjall:collect(Iter1),
     [{<<"user:1">>, <<"alice">>}, {<<"user:2">>, <<"bob">>}] = Items1,
 
     % Prefix with reverse
-    {ok, Iter2} = fjall:prefix(Ks, reverse, <<"user:">>),
+    {ok, Iter2} = fjall:iter(Ks, reverse, <<"user:">>),
     {ok, Items2} = fjall:collect(Iter2),
     [{<<"user:2">>, <<"bob">>}, {<<"user:1">>, <<"alice">>}] = Items2,
 

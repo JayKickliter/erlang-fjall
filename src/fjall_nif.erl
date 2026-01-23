@@ -28,7 +28,6 @@
 
     % fjall_wb NIFs
     wb_commit/1,
-    wb_commit_with_mode/2,
     wb_insert/4,
     wb_is_empty/1,
     wb_len/1,
@@ -69,6 +68,10 @@
     % fjall_iter NIFs
     iter_collect/1,
     iter_collect/2,
+    iter_collect_keys/1,
+    iter_collect_keys/2,
+    iter_collect_values/1,
+    iter_collect_values/2,
     iter_destroy/1,
     iter_next/1
 ]).
@@ -118,8 +121,6 @@ wb_insert(_Batch, _Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODUL
 wb_remove(_Batch, _Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec wb_commit(Batch :: fjall_wb:wb()) -> fjall:result().
 wb_commit(_Batch) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec wb_commit_with_mode(Batch :: fjall_wb:wb(), Mode :: fjall:persist_mode()) -> fjall:result().
-wb_commit_with_mode(_Batch, _Mode) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec wb_len(Batch :: fjall_wb:wb()) -> non_neg_integer().
 wb_len(_Batch) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec wb_is_empty(Batch :: fjall_wb:wb()) -> boolean().
@@ -226,6 +227,18 @@ iter_collect(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec iter_collect(Iter :: fjall_iter:iter(), Limit :: non_neg_integer()) ->
     {ok, [{binary(), binary()}]} | {error, term()}.
 iter_collect(_Iter, _Limit) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-spec iter_collect_keys(Iter :: fjall_iter:iter()) -> {ok, [binary()]} | {error, term()}.
+iter_collect_keys(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec iter_collect_keys(Iter :: fjall_iter:iter(), Limit :: non_neg_integer()) ->
+    {ok, [binary()]} | {error, term()}.
+iter_collect_keys(_Iter, _Limit) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-spec iter_collect_values(Iter :: fjall_iter:iter()) -> {ok, [binary()]} | {error, term()}.
+iter_collect_values(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
+-spec iter_collect_values(Iter :: fjall_iter:iter(), Limit :: non_neg_integer()) ->
+    {ok, [binary()]} | {error, term()}.
+iter_collect_values(_Iter, _Limit) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 -spec iter_destroy(Iter :: fjall_iter:iter()) -> ok.
 iter_destroy(_Iter) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
