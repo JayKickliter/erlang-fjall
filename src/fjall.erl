@@ -366,10 +366,15 @@ commit({batch, Ref}) ->
 commit({tx, Ref}) ->
     fjall_otx_tx:commit(Ref).
 
--doc "Returns the number of operations in the batch.".
--spec len(batch()) -> non_neg_integer().
+-doc """
+For batches, returns the number of operations. For plain keyspaces,
+returns the exact number of key-value pairs (O(n)).
+""".
+-spec len(batch() | ks()) -> non_neg_integer() | result(non_neg_integer()).
 len({batch, Ref}) ->
-    fjall_wb:len(Ref).
+    fjall_wb:len(Ref);
+len({ks, Ref}) ->
+    fjall_ks:len(Ref).
 
 -doc "Returns `true` if the batch contains no operations.".
 -spec is_empty(batch()) -> boolean().

@@ -19,6 +19,7 @@ in the Rust documentation.
     contains_key/2,
     size_of/2,
     disk_space/1,
+    len/1,
     approximate_len/1,
     first_key_value/1,
     last_key_value/1,
@@ -190,6 +191,26 @@ in the Rust documentation.
     fjall:result(non_neg_integer()).
 size_of(Keyspace, Key) ->
     fjall_nif:ks_size_of(Keyspace, Key).
+
+-doc """
+Returns the exact number of key-value pairs in the keyspace.
+
+This scans the entire keyspace, so it has O(n) complexity.
+For a faster approximation, use `approximate_len/1`.
+
+## Example
+
+```erlang
+{ok, Count} = fjall_ks:len(Keyspace),
+io:format("Keyspace has ~p items~n", [Count])
+```
+
+See [Keyspace::len](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.len)
+in the Rust documentation.
+""".
+-spec len(Keyspace :: ks()) -> fjall:result(non_neg_integer()).
+len(Keyspace) ->
+    fjall_nif:ks_len(Keyspace).
 
 -doc """
 Returns the approximate number of key-value pairs in the keyspace.

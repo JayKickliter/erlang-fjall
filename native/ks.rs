@@ -88,6 +88,12 @@ pub fn ks_size_of(ks: ResourceArc<KsRsc>, key: rustler::Binary) -> FjallResult<u
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
+pub fn ks_len(ks: ResourceArc<KsRsc>) -> FjallResult<u64> {
+    let result = ks.0.len().map(|n| n as u64).to_erlang_result();
+    FjallResult(result)
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
 pub fn ks_approximate_len(ks: ResourceArc<KsRsc>) -> u64 {
     ks.0.approximate_len() as u64
 }

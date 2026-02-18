@@ -291,5 +291,25 @@ keyspace_info_test() ->
 
     ok.
 
+len_test() ->
+    DbPath = test_db_path("len"),
+    {ok, Db} = fjall:open(DbPath, [{temporary, true}]),
+    {ok, Ks} = fjall:keyspace(Db, <<"test">>),
+
+    % Empty keyspace
+    {ok, 0} = fjall:len(Ks),
+
+    % Insert some data
+    ok = fjall:insert(Ks, <<"a">>, <<"1">>),
+    ok = fjall:insert(Ks, <<"b">>, <<"2">>),
+    ok = fjall:insert(Ks, <<"c">>, <<"3">>),
+    {ok, 3} = fjall:len(Ks),
+
+    % Remove one
+    ok = fjall:remove(Ks, <<"b">>),
+    {ok, 2} = fjall:len(Ks),
+
+    ok.
+
 test_db_path(Name) ->
     filename:join(["/tmp", "fjall_test", Name]).
