@@ -6,13 +6,27 @@ use crate::{
     otx_tx::WriteTxRsc,
     snapshot::SnapshotRsc,
 };
+use fjall::OptimisticTxKeyspace;
 use rustler::{Resource, ResourceArc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 ////////////////////////////////////////////////////////////////////////////
 // Optimistic Transaction Database Resource                              //
 ////////////////////////////////////////////////////////////////////////////
 
-pub struct OtxDbRsc(pub fjall::OptimisticTxDatabase);
+pub struct OtxDbRsc {
+    db: fjall::OptimisticTxDatabase,
+    keyspaces: Mutex<HashMap<Vec<u8>, Arc<OptimisticTxKeyspace>>>,
+}
+
+impl OtxDbRsc {
+    pub fn write_tx(&self) -> Result<fjall::OptimisticWriteTx, FjallError> {
+        self.db.write_tx().to_erlang_result()
+    }
+}
 
 impl std::panic::RefUnwindSafe for OtxDbRsc {}
 
@@ -32,7 +46,10 @@ pub fn otx_db_open(
         let path_str = decode_path(path)?;
         let builder = crate::config::parse_otx_db_options(&path_str, options)?;
         let db = builder.open().to_erlang_result()?;
-        Ok(ResourceArc::new(OtxDbRsc(db)))
+        Ok(ResourceArc::new(OtxDbRsc {
+            db,
+            keyspaces: Mutex::new(HashMap::new()),
+        }))
     })();
     FjallResult(result)
 }
@@ -45,8 +62,16 @@ pub fn otx_db_keyspace(
 ) -> FjallResult<ResourceArc<OtxKsRsc>> {
     let result = (|| {
         let ks_options = crate::config::parse_ks_options(options)?;
-        let ks = db.0.keyspace(&name, || ks_options).to_erlang_result()?;
-        Ok(ResourceArc::new(OtxKsRsc(ks)))
+        let ks = db.db.keyspace(&name, || ks_options).to_erlang_result()?;
+        let mut keyspaces = db
+            .keyspaces
+            .lock()
+            .map_err(|_| FjallError::Config("Failed to acquire keyspaces lock".into()))?;
+        let ks = keyspaces
+            .entry(name.into_bytes())
+            .or_insert_with(|| Arc::new(ks));
+        let weak = Arc::downgrade(ks);
+        Ok(ResourceArc::new(OtxKsRsc(weak)))
     })();
     FjallResult(result)
 }
@@ -59,7 +84,7 @@ pub fn otx_db_write_tx(db: ResourceArc<OtxDbRsc>) -> FjallResult<ResourceArc<Wri
 
 #[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_db_snapshot(db: ResourceArc<OtxDbRsc>) -> FjallResult<ResourceArc<SnapshotRsc>> {
-    let snapshot = db.0.read_tx();
+    let snapshot = db.db.read_tx();
     let result = Ok(ResourceArc::new(SnapshotRsc { snapshot }));
     FjallResult(result)
 }
@@ -79,7 +104,7 @@ pub fn otx_db_persist(db: ResourceArc<OtxDbRsc>, mode: rustler::Atom) -> FjallOk
                 mode
             )));
         };
-        db.0.persist(persist_mode).to_erlang_result()?;
+        db.db.persist(persist_mode).to_erlang_result()?;
         Ok(())
     })();
     FjallOkResult(result)

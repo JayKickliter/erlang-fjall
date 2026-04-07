@@ -351,7 +351,7 @@ remove({tx, TxRef}, {otx_ks, KsRef}, Key) ->
     fjall_otx_tx:remove(TxRef, KsRef, Key).
 
 -doc "Returns the approximate disk space used by the keyspace in bytes.".
--spec disk_space(ks()) -> non_neg_integer().
+-spec disk_space(ks()) -> result(non_neg_integer()).
 disk_space({ks, Ref}) ->
     fjall_ks:disk_space(Ref).
 
@@ -415,7 +415,7 @@ size_of({otx_ks, Ref}, Key) ->
     fjall_otx_ks:size_of(Ref, Key).
 
 -doc "Returns the approximate number of key-value pairs in the keyspace.".
--spec approximate_len(ks()) -> non_neg_integer().
+-spec approximate_len(ks()) -> result(non_neg_integer()).
 approximate_len({ks, Ref}) ->
     fjall_ks:approximate_len(Ref);
 approximate_len({otx_ks, Ref}) ->
@@ -436,7 +436,7 @@ last_key_value({otx_ks, Ref}) ->
     fjall_otx_ks:last_key_value(Ref).
 
 -doc "Returns the filesystem path to the keyspace directory.".
--spec path(ks()) -> binary().
+-spec path(ks()) -> result(binary()).
 path({ks, Ref}) ->
     fjall_ks:path(Ref);
 path({otx_ks, Ref}) ->

@@ -210,7 +210,7 @@ io:format("Keyspace has approximately ~p items~n", [Count])
 See [OptimisticTxKeyspace::approximate_len](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxKeyspace.html#method.approximate_len)
 in the Rust documentation.
 """.
--spec approximate_len(Keyspace :: otx_ks()) -> non_neg_integer().
+-spec approximate_len(Keyspace :: otx_ks()) -> fjall:result(non_neg_integer()).
 approximate_len(Keyspace) ->
     fjall_nif:otx_ks_approximate_len(Keyspace).
 
@@ -285,7 +285,7 @@ io:format("Keyspace path: ~s~n", [Path])
 See [OptimisticTxKeyspace::path](https://docs.rs/fjall/3.0.1/fjall/struct.OptimisticTxKeyspace.html#method.path)
 in the Rust documentation.
 """.
--spec path(Keyspace :: otx_ks()) -> binary().
+-spec path(Keyspace :: otx_ks()) -> fjall:result(binary()).
 path(Keyspace) ->
     fjall_nif:otx_ks_path(Keyspace).
 

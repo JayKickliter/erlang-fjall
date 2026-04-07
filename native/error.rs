@@ -3,6 +3,7 @@ use rustler::{Encoder, Env, Term};
 pub mod atom {
     rustler::atoms! {
         batch_already_committed,
+        db_closed,
         error,
         not_found,
         ok,
@@ -19,6 +20,7 @@ pub mod atom {
 pub enum FjallError {
     BatchAlreadyCommitted,
     Config(String),
+    DbClosed,
     Decode(String),
     Fjall(fjall::Error),
     NotFound,
@@ -58,6 +60,7 @@ impl Encoder for FjallError {
                 (atom::error(), atom::batch_already_committed()).encode(env)
             }
             FjallError::Config(msg) => (atom::error(), msg.clone()).encode(env),
+            FjallError::DbClosed => (atom::error(), atom::db_closed()).encode(env),
             FjallError::Decode(msg) => (atom::error(), msg.clone()).encode(env),
             FjallError::Fjall(e) => {
                 let msg = format!("{:?}", e);

@@ -31,9 +31,10 @@ pub fn snapshot_get<'a>(
 ) -> FjallResult<Term<'a>> {
     let result = (|| {
         use fjall::Readable;
+        let ks_ref = ks.upgrade()?;
         let val = snapshot
             .snapshot
-            .get(&ks.0, key.as_slice())
+            .get(&*ks_ref, key.as_slice())
             .to_erlang_result()?;
         match val {
             Some(value) => Ok(make_binary(env, &value).encode(env)),

@@ -5,12 +5,6 @@ use crate::{
 use rustler::{Resource, ResourceArc};
 use std::sync::Mutex;
 
-pub mod atom {
-    rustler::atoms! {
-        ok,
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////
 // Write Batch Resource                                                  //
 ////////////////////////////////////////////////////////////////////////////
@@ -56,11 +50,15 @@ pub fn wb_insert(
     ks: ResourceArc<KsRsc>,
     key: rustler::Binary,
     value: rustler::Binary,
-) -> rustler::Atom {
-    let _ = batch.with_batch_mut(|b| {
-        b.insert(&ks.0, key.as_slice(), value.as_slice());
-    });
-    atom::ok()
+) -> FjallOkResult {
+    let result = (|| {
+        let ks_ref = ks.upgrade()?;
+        batch.with_batch_mut(|b| {
+            b.insert(&ks_ref, key.as_slice(), value.as_slice());
+        })?;
+        Ok(())
+    })();
+    FjallOkResult(result)
 }
 
 #[rustler::nif]
@@ -68,11 +66,15 @@ pub fn wb_remove(
     batch: ResourceArc<WbRsc>,
     ks: ResourceArc<KsRsc>,
     key: rustler::Binary,
-) -> rustler::Atom {
-    let _ = batch.with_batch_mut(|b| {
-        b.remove(&ks.0, key.as_slice());
-    });
-    atom::ok()
+) -> FjallOkResult {
+    let result = (|| {
+        let ks_ref = ks.upgrade()?;
+        batch.with_batch_mut(|b| {
+            b.remove(&ks_ref, key.as_slice());
+        })?;
+        Ok(())
+    })();
+    FjallOkResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]

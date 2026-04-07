@@ -54,7 +54,7 @@ in the Rust documentation.
     Keyspace :: fjall_ks:ks(),
     Key :: binary(),
     Value :: binary()
-) -> ok.
+) -> fjall:result().
 insert(Batch, Keyspace, Key, Value) ->
     fjall_nif:wb_insert(Batch, Keyspace, Key, Value).
 
@@ -77,7 +77,7 @@ ok = fjall_wb:commit(Batch)
 See [OwnedWriteBatch::remove](https://docs.rs/fjall/3.0.1/fjall/struct.OwnedWriteBatch.html#method.remove)
 in the Rust documentation.
 """.
--spec remove(Batch :: wb(), Keyspace :: fjall_ks:ks(), Key :: binary()) -> ok.
+-spec remove(Batch :: wb(), Keyspace :: fjall_ks:ks(), Key :: binary()) -> fjall:result().
 remove(Batch, Keyspace, Key) ->
     fjall_nif:wb_remove(Batch, Keyspace, Key).
 

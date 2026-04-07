@@ -100,7 +100,7 @@ ks_get(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 ks_insert(_Ks, _Key, _Value) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec ks_remove(Ks :: fjall_ks:ks(), Key :: binary()) -> fjall:result().
 ks_remove(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec ks_disk_space(Ks :: fjall_ks:ks()) -> non_neg_integer().
+-spec ks_disk_space(Ks :: fjall_ks:ks()) -> fjall:result(non_neg_integer()).
 ks_disk_space(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec ks_clear(Ks :: fjall_ks:ks()) -> fjall:result().
 ks_clear(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
@@ -110,13 +110,13 @@ ks_contains_key(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 ks_size_of(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec ks_len(Ks :: fjall_ks:ks()) -> fjall:result(non_neg_integer()).
 ks_len(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec ks_approximate_len(Ks :: fjall_ks:ks()) -> non_neg_integer().
+-spec ks_approximate_len(Ks :: fjall_ks:ks()) -> fjall:result(non_neg_integer()).
 ks_approximate_len(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec ks_first_key_value(Ks :: fjall_ks:ks()) -> fjall:result({binary(), binary()}).
 ks_first_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec ks_last_key_value(Ks :: fjall_ks:ks()) -> fjall:result({binary(), binary()}).
 ks_last_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec ks_path(Ks :: fjall_ks:ks()) -> binary().
+-spec ks_path(Ks :: fjall_ks:ks()) -> fjall:result(binary()).
 ks_path(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_wb NIFs
@@ -182,13 +182,13 @@ otx_ks_contains_key(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec otx_ks_size_of(Ks :: fjall_otx_ks:otx_ks(), Key :: binary()) ->
     fjall:result(non_neg_integer()).
 otx_ks_size_of(_Ks, _Key) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_approximate_len(Ks :: fjall_otx_ks:otx_ks()) -> non_neg_integer().
+-spec otx_ks_approximate_len(Ks :: fjall_otx_ks:otx_ks()) -> fjall:result(non_neg_integer()).
 otx_ks_approximate_len(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec otx_ks_first_key_value(Ks :: fjall_otx_ks:otx_ks()) -> fjall:result({binary(), binary()}).
 otx_ks_first_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec otx_ks_last_key_value(Ks :: fjall_otx_ks:otx_ks()) -> fjall:result({binary(), binary()}).
 otx_ks_last_key_value(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
--spec otx_ks_path(Ks :: fjall_otx_ks:otx_ks()) -> binary().
+-spec otx_ks_path(Ks :: fjall_otx_ks:otx_ks()) -> fjall:result(binary()).
 otx_ks_path(_Ks) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_iter NIFs
