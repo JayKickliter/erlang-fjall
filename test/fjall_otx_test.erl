@@ -212,7 +212,7 @@ keyspace_info_test() ->
     {error, not_found} = fjall:size_of(Ks, <<"nonexistent">>),
 
     % approximate_len (should be around 3)
-    Len = fjall:approximate_len(Ks),
+    {ok, Len} = fjall:approximate_len(Ks),
     true = Len >= 0,
 
     % first_key_value
@@ -222,7 +222,7 @@ keyspace_info_test() ->
     {ok, {<<"c">>, <<"333">>}} = fjall:last_key_value(Ks),
 
     % path
-    Path = fjall:path(Ks),
+    {ok, Path} = fjall:path(Ks),
     true = is_binary(Path),
 
     % take (only available on otx_ks)
@@ -231,6 +231,49 @@ keyspace_info_test() ->
     {ok, false} = fjall:contains_key(Ks, <<"a">>),
 
     ok.
+
+otx_db_gc_keyspace_releases_lock_test() ->
+    DbPath = test_db_path("gc_lock"),
+    Ks = spawn_open_otx_db(DbPath, fun(Db) ->
+        {ok, Ks} = fjall:keyspace(Db, <<"test">>),
+        ok = fjall:insert(Ks, <<"key1">>, <<"value1">>),
+        ok = fjall:insert(Ks, <<"key2">>, <<"value2">>),
+        Ks
+    end),
+    ?assertMatch({error, db_closed}, fjall:get(Ks, <<"key1">>)),
+    ?assertMatch({ok, _Db2}, fjall:open(DbPath, [{optimistic, true}])),
+    ok.
+
+otx_db_gc_iterator_does_not_hold_lock_test() ->
+    DbPath = test_db_path("gc_iter_lock"),
+    Iter = spawn_open_otx_db(DbPath, fun(Db) ->
+        {ok, Ks} = fjall:keyspace(Db, <<"test">>),
+        ok = fjall:insert(Ks, <<"key1">>, <<"value1">>),
+        ok = fjall:insert(Ks, <<"key2">>, <<"value2">>),
+        {ok, Iter} = fjall:iter(Ks, forward),
+        Iter
+    end),
+    {ok, _} = fjall:open(DbPath, [{optimistic, true}]),
+    {ok, {<<"key1">>, <<"value1">>}} = fjall:next(Iter),
+    {ok, {<<"key2">>, <<"value2">>}} = fjall:next(Iter),
+    ok.
+
+spawn_open_otx_db(DbPath, Fun) ->
+    Self = self(),
+    Pid = spawn(fun() ->
+        {ok, Db} = fjall:open(DbPath, [{optimistic, true}]),
+        Result = Fun(Db),
+        Self ! {result, Result}
+    end),
+    MRef = monitor(process, Pid),
+    Result =
+        receive
+            {result, R} -> R
+        end,
+    receive
+        {'DOWN', MRef, process, Pid, _} -> ok
+    end,
+    Result.
 
 test_db_path(Name) ->
     filename:join(["/tmp", "fjall_otx_test", Name]).

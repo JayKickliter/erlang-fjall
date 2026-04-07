@@ -19,7 +19,7 @@ impl Resource for WriteTxRsc {}
 impl WriteTxRsc {
     /// Create a new write transaction
     pub fn new(db_ref: ResourceArc<OtxDbRsc>) -> Result<Self, FjallError> {
-        let txn = db_ref.0.write_tx().to_erlang_result()?;
+        let txn = db_ref.write_tx()?;
         Ok(WriteTxRsc(Mutex::new(Some(txn))))
     }
 
@@ -67,10 +67,13 @@ pub fn otx_tx_insert(
     key: rustler::Binary,
     value: rustler::Binary,
 ) -> FjallOkResult {
-    let result = txn.with_txn_mut(|t| {
-        t.insert(&ks.0, key.as_slice(), value.as_slice());
-        Ok(())
-    });
+    let result = (|| {
+        let ks_ref = ks.upgrade()?;
+        txn.with_txn_mut(|t| {
+            t.insert(&*ks_ref, key.as_slice(), value.as_slice());
+            Ok(())
+        })
+    })();
     FjallOkResult(result)
 }
 
@@ -81,14 +84,17 @@ pub fn otx_tx_get<'a>(
     ks: ResourceArc<OtxKsRsc>,
     key: rustler::Binary,
 ) -> FjallResult<Term<'a>> {
-    let result = txn.with_txn_mut(|t| {
-        use fjall::Readable;
-        let val = t.get(&ks.0, key.as_slice()).to_erlang_result()?;
-        match val {
-            Some(value) => Ok(make_binary(env, &value).encode(env)),
-            None => Err(FjallError::NotFound),
-        }
-    });
+    let result = (|| {
+        let ks_ref = ks.upgrade()?;
+        txn.with_txn_mut(|t| {
+            use fjall::Readable;
+            let val = t.get(&*ks_ref, key.as_slice()).to_erlang_result()?;
+            match val {
+                Some(value) => Ok(make_binary(env, &value).encode(env)),
+                None => Err(FjallError::NotFound),
+            }
+        })
+    })();
     FjallResult(result)
 }
 
@@ -98,10 +104,13 @@ pub fn otx_tx_remove(
     ks: ResourceArc<OtxKsRsc>,
     key: rustler::Binary,
 ) -> FjallOkResult {
-    let result = txn.with_txn_mut(|t| {
-        t.remove(&ks.0, key.as_slice());
-        Ok(())
-    });
+    let result = (|| {
+        let ks_ref = ks.upgrade()?;
+        txn.with_txn_mut(|t| {
+            t.remove(&*ks_ref, key.as_slice());
+            Ok(())
+        })
+    })();
     FjallOkResult(result)
 }
 

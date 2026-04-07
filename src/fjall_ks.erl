@@ -137,7 +137,7 @@ io:format("Keyspace size: ~p bytes~n", [Size])
 See [Keyspace::disk_space](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.disk_space)
 in the Rust documentation.
 """.
--spec disk_space(Keyspace :: ks()) -> non_neg_integer().
+-spec disk_space(Keyspace :: ks()) -> fjall:result(non_neg_integer()).
 disk_space(Keyspace) ->
     fjall_nif:ks_disk_space(Keyspace).
 
@@ -228,7 +228,7 @@ io:format("Keyspace has approximately ~p items~n", [Count])
 See [Keyspace::approximate_len](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.approximate_len)
 in the Rust documentation.
 """.
--spec approximate_len(Keyspace :: ks()) -> non_neg_integer().
+-spec approximate_len(Keyspace :: ks()) -> fjall:result(non_neg_integer()).
 approximate_len(Keyspace) ->
     fjall_nif:ks_approximate_len(Keyspace).
 
@@ -303,7 +303,7 @@ io:format("Keyspace path: ~s~n", [Path])
 See [Keyspace::path](https://docs.rs/fjall/3.0.1/fjall/struct.Keyspace.html#method.path)
 in the Rust documentation.
 """.
--spec path(Keyspace :: ks()) -> binary().
+-spec path(Keyspace :: ks()) -> fjall:result(binary()).
 path(Keyspace) ->
     fjall_nif:ks_path(Keyspace).
 

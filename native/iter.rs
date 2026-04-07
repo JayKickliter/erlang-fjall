@@ -93,12 +93,16 @@ impl<'a> Decoder<'a> for Range {
 
 #[rustler::nif(schedule = "DirtyIo")]
 pub fn ks_iter(ks: ResourceArc<KsRsc>, direction: Direction) -> FjallResult<ResourceArc<IterRsc>> {
-    let iter = ks.0.iter();
-    let inner = match direction {
-        Direction::Forward => IterInner::Forward(iter),
-        Direction::Reverse => IterInner::Reverse(iter.rev()),
-    };
-    FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner))))))
+    let result = (|| {
+        let ks_ref = ks.upgrade()?;
+        let iter = ks_ref.iter();
+        let inner = match direction {
+            Direction::Forward => IterInner::Forward(iter),
+            Direction::Reverse => IterInner::Reverse(iter.rev()),
+        };
+        Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner)))))
+    })();
+    FjallResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
@@ -109,15 +113,19 @@ pub fn ks_range(
     start: rustler::Binary,
     end: rustler::Binary,
 ) -> FjallResult<ResourceArc<IterRsc>> {
-    let raw_iter = match range {
-        Range::Inclusive => ks.0.range(start.as_slice()..=end.as_slice()),
-        Range::Exclusive => ks.0.range(start.as_slice()..end.as_slice()),
-    };
-    let iter = match direction {
-        Direction::Forward => IterInner::Forward(raw_iter),
-        Direction::Reverse => IterInner::Reverse(raw_iter.rev()),
-    };
-    FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(iter))))))
+    let result = (|| {
+        let ks_ref = ks.upgrade()?;
+        let raw_iter = match range {
+            Range::Inclusive => ks_ref.range(start.as_slice()..=end.as_slice()),
+            Range::Exclusive => ks_ref.range(start.as_slice()..end.as_slice()),
+        };
+        let iter = match direction {
+            Direction::Forward => IterInner::Forward(raw_iter),
+            Direction::Reverse => IterInner::Reverse(raw_iter.rev()),
+        };
+        Ok(ResourceArc::new(IterRsc(Mutex::new(Some(iter)))))
+    })();
+    FjallResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
@@ -126,12 +134,16 @@ pub fn ks_prefix(
     direction: Direction,
     prefix: rustler::Binary,
 ) -> FjallResult<ResourceArc<IterRsc>> {
-    let iter = ks.0.prefix(prefix.as_slice());
-    let inner = match direction {
-        Direction::Forward => IterInner::Forward(iter),
-        Direction::Reverse => IterInner::Reverse(iter.rev()),
-    };
-    FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner))))))
+    let result = (|| {
+        let ks_ref = ks.upgrade()?;
+        let iter = ks_ref.prefix(prefix.as_slice());
+        let inner = match direction {
+            Direction::Forward => IterInner::Forward(iter),
+            Direction::Reverse => IterInner::Reverse(iter.rev()),
+        };
+        Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner)))))
+    })();
+    FjallResult(result)
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -143,13 +155,17 @@ pub fn otx_ks_iter(
     ks: ResourceArc<OtxKsRsc>,
     direction: Direction,
 ) -> FjallResult<ResourceArc<IterRsc>> {
-    let keyspace: &fjall::Keyspace = ks.0.as_ref();
-    let iter = keyspace.iter();
-    let inner = match direction {
-        Direction::Forward => IterInner::Forward(iter),
-        Direction::Reverse => IterInner::Reverse(iter.rev()),
-    };
-    FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner))))))
+    let result = (|| {
+        let ks_ref = ks.upgrade()?;
+        let keyspace: &fjall::Keyspace = (*ks_ref).as_ref();
+        let iter = keyspace.iter();
+        let inner = match direction {
+            Direction::Forward => IterInner::Forward(iter),
+            Direction::Reverse => IterInner::Reverse(iter.rev()),
+        };
+        Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner)))))
+    })();
+    FjallResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
@@ -160,16 +176,20 @@ pub fn otx_ks_range(
     start: rustler::Binary,
     end: rustler::Binary,
 ) -> FjallResult<ResourceArc<IterRsc>> {
-    let keyspace: &fjall::Keyspace = ks.0.as_ref();
-    let raw_iter = match range {
-        Range::Inclusive => keyspace.range(start.as_slice()..=end.as_slice()),
-        Range::Exclusive => keyspace.range(start.as_slice()..end.as_slice()),
-    };
-    let iter = match direction {
-        Direction::Forward => IterInner::Forward(raw_iter),
-        Direction::Reverse => IterInner::Reverse(raw_iter.rev()),
-    };
-    FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(iter))))))
+    let result = (|| {
+        let ks_ref = ks.upgrade()?;
+        let keyspace: &fjall::Keyspace = (*ks_ref).as_ref();
+        let raw_iter = match range {
+            Range::Inclusive => keyspace.range(start.as_slice()..=end.as_slice()),
+            Range::Exclusive => keyspace.range(start.as_slice()..end.as_slice()),
+        };
+        let iter = match direction {
+            Direction::Forward => IterInner::Forward(raw_iter),
+            Direction::Reverse => IterInner::Reverse(raw_iter.rev()),
+        };
+        Ok(ResourceArc::new(IterRsc(Mutex::new(Some(iter)))))
+    })();
+    FjallResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
@@ -178,13 +198,17 @@ pub fn otx_ks_prefix(
     direction: Direction,
     prefix: rustler::Binary,
 ) -> FjallResult<ResourceArc<IterRsc>> {
-    let keyspace: &fjall::Keyspace = ks.0.as_ref();
-    let iter = keyspace.prefix(prefix.as_slice());
-    let inner = match direction {
-        Direction::Forward => IterInner::Forward(iter),
-        Direction::Reverse => IterInner::Reverse(iter.rev()),
-    };
-    FjallResult(Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner))))))
+    let result = (|| {
+        let ks_ref = ks.upgrade()?;
+        let keyspace: &fjall::Keyspace = (*ks_ref).as_ref();
+        let iter = keyspace.prefix(prefix.as_slice());
+        let inner = match direction {
+            Direction::Forward => IterInner::Forward(iter),
+            Direction::Reverse => IterInner::Reverse(iter.rev()),
+        };
+        Ok(ResourceArc::new(IterRsc(Mutex::new(Some(inner)))))
+    })();
+    FjallResult(result)
 }
 
 ////////////////////////////////////////////////////////////////////////////

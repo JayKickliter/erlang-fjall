@@ -4,8 +4,12 @@ use crate::{
     ks::KsRsc,
     wb::WbRsc,
 };
+use fjall::Keyspace;
 use rustler::{Resource, ResourceArc};
-use std::sync::Mutex;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 pub mod atom {
     rustler::atoms! {
@@ -19,7 +23,10 @@ pub mod atom {
 // Database Resource                                                      //
 ////////////////////////////////////////////////////////////////////////////
 
-pub struct DbRsc(pub fjall::Database);
+pub struct DbRsc {
+    db: fjall::Database,
+    keyspaces: Mutex<HashMap<Vec<u8>, Arc<Keyspace>>>,
+}
 
 impl std::panic::RefUnwindSafe for DbRsc {}
 
@@ -39,7 +46,10 @@ pub fn db_open(
         let path_str = decode_path(path)?;
         let builder = crate::config::parse_db_options(&path_str, options)?;
         let db = builder.open().to_erlang_result()?;
-        Ok(ResourceArc::new(DbRsc(db)))
+        Ok(ResourceArc::new(DbRsc {
+            db,
+            keyspaces: Mutex::new(HashMap::new()),
+        }))
     })();
     FjallResult(result)
 }
@@ -52,15 +62,23 @@ pub fn db_keyspace(
 ) -> FjallResult<ResourceArc<KsRsc>> {
     let result = (|| {
         let ks_options = crate::config::parse_ks_options(options)?;
-        let ks = db.0.keyspace(&name, || ks_options).to_erlang_result()?;
-        Ok(ResourceArc::new(KsRsc(ks)))
+        let ks = db.db.keyspace(&name, || ks_options).to_erlang_result()?;
+        let mut keyspaces = db
+            .keyspaces
+            .lock()
+            .map_err(|_| FjallError::Config("Failed to acquire keyspaces lock".into()))?;
+        let ks = keyspaces
+            .entry(name.into_bytes())
+            .or_insert_with(|| Arc::new(ks));
+        let weak = Arc::downgrade(ks);
+        Ok(ResourceArc::new(KsRsc(weak)))
     })();
     FjallResult(result)
 }
 
 #[rustler::nif]
 pub fn db_batch(db: ResourceArc<DbRsc>) -> FjallResult<ResourceArc<WbRsc>> {
-    let batch = db.0.batch();
+    let batch = db.db.batch();
     let res = Ok(ResourceArc::new(WbRsc(Mutex::new(Some(batch)))));
     FjallResult(res)
 }
@@ -80,7 +98,7 @@ pub fn db_persist(db: ResourceArc<DbRsc>, mode: rustler::Atom) -> FjallOkResult 
                 mode
             )));
         };
-        db.0.persist(persist_mode).to_erlang_result()?;
+        db.db.persist(persist_mode).to_erlang_result()?;
         Ok(())
     })();
     FjallOkResult(result)
