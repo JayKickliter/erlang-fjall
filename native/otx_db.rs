@@ -24,11 +24,29 @@ struct OtxDbRscInner {
     keyspaces: HashMap<Vec<u8>, Arc<OptimisticTxKeyspace>>,
 }
 
+impl OtxDbRscInner {
+    fn db(&self) -> Result<&OptimisticTxDatabase, FjallError> {
+        self.db.as_ref().ok_or(FjallError::DbClosed)
+    }
+}
+
 impl OtxDbRsc {
     pub fn write_tx(&self) -> Result<OptimisticWriteTx, FjallError> {
-        let inner = self.0.read().unwrap();
-        let db = inner.db.as_ref().ok_or(FjallError::DbClosed)?;
-        db.write_tx().to_erlang_result()
+        self.with_inner(|inner| inner.db()?.write_tx().to_erlang_result())
+    }
+
+    fn with_inner<F, T>(&self, f: F) -> Result<T, FjallError>
+    where
+        F: FnOnce(&OtxDbRscInner) -> Result<T, FjallError>,
+    {
+        f(&self.0.read().unwrap())
+    }
+
+    fn with_inner_mut<F, T>(&self, f: F) -> Result<T, FjallError>
+    where
+        F: FnOnce(&mut OtxDbRscInner) -> Result<T, FjallError>,
+    {
+        f(&mut self.0.write().unwrap())
     }
 }
 
@@ -64,18 +82,19 @@ pub fn otx_db_keyspace(
     name: String,
     options: Vec<(rustler::Atom, rustler::Term)>,
 ) -> FjallResult<ResourceArc<OtxKsRsc>> {
-    let result = (|| {
+    let result = db.with_inner_mut(|inner| {
         let ks_options = crate::config::parse_ks_options(options)?;
-        let mut inner = db.0.write().unwrap();
-        let db_ref = inner.db.as_ref().ok_or(FjallError::DbClosed)?;
-        let ks = db_ref.keyspace(&name, || ks_options).to_erlang_result()?;
+        let ks = inner
+            .db()?
+            .keyspace(&name, || ks_options)
+            .to_erlang_result()?;
         let ks = inner
             .keyspaces
             .entry(name.into_bytes())
             .or_insert_with(|| Arc::new(ks));
         let weak = Arc::downgrade(ks);
         Ok(ResourceArc::new(OtxKsRsc(weak)))
-    })();
+    });
     FjallResult(result)
 }
 
@@ -87,18 +106,16 @@ pub fn otx_db_write_tx(db: ResourceArc<OtxDbRsc>) -> FjallResult<ResourceArc<Wri
 
 #[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_db_snapshot(db: ResourceArc<OtxDbRsc>) -> FjallResult<ResourceArc<SnapshotRsc>> {
-    let result = (|| {
-        let inner = db.0.read().unwrap();
-        let db_ref = inner.db.as_ref().ok_or(FjallError::DbClosed)?;
-        let snapshot = db_ref.read_tx();
+    let result = db.with_inner(|inner| {
+        let snapshot = inner.db()?.read_tx();
         Ok(ResourceArc::new(SnapshotRsc { snapshot }))
-    })();
+    });
     FjallResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_db_persist(db: ResourceArc<OtxDbRsc>, mode: rustler::Atom) -> FjallOkResult {
-    let result = (|| {
+    let result = db.with_inner(|inner| {
         let persist_mode = if mode == atom::buffer() {
             fjall::PersistMode::Buffer
         } else if mode == atom::sync_data() {
@@ -111,18 +128,17 @@ pub fn otx_db_persist(db: ResourceArc<OtxDbRsc>, mode: rustler::Atom) -> FjallOk
                 mode
             )));
         };
-        let inner = db.0.read().unwrap();
-        let db_ref = inner.db.as_ref().ok_or(FjallError::DbClosed)?;
-        db_ref.persist(persist_mode).to_erlang_result()?;
+        inner.db()?.persist(persist_mode).to_erlang_result()?;
         Ok(())
-    })();
+    });
     FjallOkResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
 pub fn otx_db_close(db: ResourceArc<OtxDbRsc>) -> FjallOkResult {
-    let mut inner = db.0.write().unwrap();
-    inner.keyspaces.clear();
-    inner.db.take();
-    FjallOkResult(Ok(()))
+    FjallOkResult(db.with_inner_mut(|inner| {
+        inner.keyspaces.clear();
+        inner.db.take();
+        Ok(())
+    }))
 }
