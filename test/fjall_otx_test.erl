@@ -232,6 +232,32 @@ keyspace_info_test() ->
 
     ok.
 
+otx_db_close_test() ->
+    DbPath = test_db_path("close"),
+    {ok, Db} = fjall:open(DbPath, [{optimistic, true}, {temporary, true}]),
+    {ok, Ks} = fjall:keyspace(Db, <<"test">>),
+    ok = fjall:insert(Ks, <<"key">>, <<"value">>),
+    {ok, <<"value">>} = fjall:get(Ks, <<"key">>),
+    %% Create iterator before close
+    {ok, Iter} = fjall:iter(Ks, forward),
+    ok = fjall:close(Db),
+    %% Iterator created before close still works (self-contained snapshot)
+    {ok, {<<"key">>, <<"value">>}} = fjall:next(Iter),
+    done = fjall:next(Iter),
+    %% DB operations fail after close
+    ?assertMatch({error, db_closed}, fjall:keyspace(Db, <<"test">>)),
+    ?assertMatch({error, db_closed}, fjall:write_tx(Db)),
+    ?assertMatch({error, db_closed}, fjall:snapshot(Db)),
+    ?assertMatch({error, db_closed}, fjall:persist(Db, sync_all)),
+    %% Keyspace operations fail after close
+    ?assertMatch({error, db_closed}, fjall:get(Ks, <<"key">>)),
+    ?assertMatch({error, db_closed}, fjall:insert(Ks, <<"k">>, <<"v">>)),
+    ?assertMatch({error, db_closed}, fjall:remove(Ks, <<"key">>)),
+    ?assertMatch({error, db_closed}, fjall:contains_key(Ks, <<"key">>)),
+    %% Closing again is idempotent
+    ok = fjall:close(Db),
+    ok.
+
 otx_db_gc_keyspace_releases_lock_test() ->
     DbPath = test_db_path("gc_lock"),
     Ks = spawn_open_otx_db(DbPath, fun(Db) ->
@@ -276,4 +302,7 @@ spawn_open_otx_db(DbPath, Fun) ->
     Result.
 
 test_db_path(Name) ->
-    filename:join(["/tmp", "fjall_otx_test", Name]).
+    Rand = binary_to_list(
+        base64:encode(crypto:strong_rand_bytes(16), #{mode => urlsafe, padding => false})
+    ),
+    filename:join(["/tmp", "fjall_otx_test", Name ++ "_" ++ Rand]).

@@ -7,6 +7,7 @@
 -export([
     % fjall_db NIFs
     db_batch/1,
+    db_close/1,
     db_keyspace/3,
     db_open/2,
     db_persist/2,
@@ -36,6 +37,7 @@
     wb_remove/3,
 
     % fjall_otx_db NIFs
+    otx_db_close/1,
     otx_db_keyspace/3,
     otx_db_open/2,
     otx_db_persist/2,
@@ -83,6 +85,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % fjall_db NIFs
+-spec db_close(Db :: fjall_db:db()) -> fjall:result().
+db_close(_Db) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec db_open(Path :: binary(), Options :: list()) -> fjall:result(fjall_db:db()).
 db_open(_Path, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec db_keyspace(Db :: fjall_db:db(), Name :: binary(), Options :: list()) ->
@@ -133,6 +137,8 @@ wb_len(_Batch) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 wb_is_empty(_Batch) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 % fjall_otx_db NIFs
+-spec otx_db_close(Db :: fjall_otx_db:otx_db()) -> fjall:result().
+otx_db_close(_Db) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec otx_db_open(Path :: binary(), Options :: list()) -> fjall:result(fjall_otx_db:otx_db()).
 otx_db_open(_Path, _Options) -> erlang:nif_error({nif_not_loaded, ?MODULE}).
 -spec otx_db_keyspace(Db :: fjall_otx_db:otx_db(), Name :: binary(), Options :: list()) ->

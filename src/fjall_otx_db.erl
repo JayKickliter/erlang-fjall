@@ -10,6 +10,7 @@ in the Rust documentation.
 -export([
     open/1,
     open/2,
+    close/1,
     keyspace/2,
     keyspace/3,
     write_tx/1,
@@ -68,6 +69,25 @@ See `t:fjall:config_option/0` for available configuration options.
 open(Path, Options) ->
     PathBinary = path_to_binary(Path),
     fjall_nif:otx_db_open(PathBinary, Options).
+
+-doc """
+Closes the database, releasing file locks and resources.
+
+After closing, all operations on this database and its keyspaces will
+return `{error, db_closed}`.
+
+Returns `ok` on success or `{error, Reason}` on failure.
+
+## Example
+
+```erlang
+{ok, Database} = fjall_otx_db:open("./db"),
+ok = fjall_otx_db:close(Database)
+```
+""".
+-spec close(Database :: otx_db()) -> fjall:result().
+close(Database) ->
+    fjall_nif:otx_db_close(Database).
 
 -doc """
 Opens or creates a keyspace in a transactional database with default options.
