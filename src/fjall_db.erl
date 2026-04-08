@@ -13,6 +13,7 @@ in the Rust documentation.
 -export([
     open/1,
     open/2,
+    close/1,
     keyspace/2,
     keyspace/3,
     batch/1,
@@ -82,6 +83,25 @@ open(Path, Options) ->
     fjall:result(db()).
 open_nif(Path, Options) ->
     fjall_nif:db_open(Path, Options).
+
+-doc """
+Closes the database, releasing file locks and resources.
+
+After closing, all operations on this database and its keyspaces will
+return `{error, db_closed}`.
+
+Returns `ok` on success or `{error, Reason}` on failure.
+
+## Example
+
+```erlang
+{ok, Database} = fjall_db:open("./db"),
+ok = fjall_db:close(Database)
+```
+""".
+-spec close(Database :: db()) -> fjall:result().
+close(Database) ->
+    fjall_nif:db_close(Database).
 
 -doc """
 Opens or creates a keyspace within a database with default options.

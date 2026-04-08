@@ -4,11 +4,11 @@ use crate::{
     ks::KsRsc,
     wb::WbRsc,
 };
-use fjall::Keyspace;
+use fjall::{Database, Keyspace};
 use rustler::{Resource, ResourceArc};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
 };
 
 pub mod atom {
@@ -23,9 +23,11 @@ pub mod atom {
 // Database Resource                                                      //
 ////////////////////////////////////////////////////////////////////////////
 
-pub struct DbRsc {
-    db: fjall::Database,
-    keyspaces: Mutex<HashMap<Vec<u8>, Arc<Keyspace>>>,
+pub struct DbRsc(RwLock<DbRscInner>);
+
+struct DbRscInner {
+    db: Option<Database>,
+    keyspaces: HashMap<Vec<u8>, Arc<Keyspace>>,
 }
 
 impl std::panic::RefUnwindSafe for DbRsc {}
@@ -46,10 +48,10 @@ pub fn db_open(
         let path_str = decode_path(path)?;
         let builder = crate::config::parse_db_options(&path_str, options)?;
         let db = builder.open().to_erlang_result()?;
-        Ok(ResourceArc::new(DbRsc {
-            db,
-            keyspaces: Mutex::new(HashMap::new()),
-        }))
+        Ok(ResourceArc::new(DbRsc(RwLock::new(DbRscInner {
+            db: Some(db),
+            keyspaces: HashMap::new(),
+        }))))
     })();
     FjallResult(result)
 }
@@ -62,12 +64,11 @@ pub fn db_keyspace(
 ) -> FjallResult<ResourceArc<KsRsc>> {
     let result = (|| {
         let ks_options = crate::config::parse_ks_options(options)?;
-        let ks = db.db.keyspace(&name, || ks_options).to_erlang_result()?;
-        let mut keyspaces = db
+        let mut inner = db.0.write().unwrap();
+        let db_ref = inner.db.as_ref().ok_or(FjallError::DbClosed)?;
+        let ks = db_ref.keyspace(&name, || ks_options).to_erlang_result()?;
+        let ks = inner
             .keyspaces
-            .lock()
-            .map_err(|_| FjallError::Config("Failed to acquire keyspaces lock".into()))?;
-        let ks = keyspaces
             .entry(name.into_bytes())
             .or_insert_with(|| Arc::new(ks));
         let weak = Arc::downgrade(ks);
@@ -78,9 +79,13 @@ pub fn db_keyspace(
 
 #[rustler::nif]
 pub fn db_batch(db: ResourceArc<DbRsc>) -> FjallResult<ResourceArc<WbRsc>> {
-    let batch = db.db.batch();
-    let res = Ok(ResourceArc::new(WbRsc(Mutex::new(Some(batch)))));
-    FjallResult(res)
+    let result = (|| {
+        let inner = db.0.read().unwrap();
+        let db_ref = inner.db.as_ref().ok_or(FjallError::DbClosed)?;
+        let batch = db_ref.batch();
+        Ok(ResourceArc::new(WbRsc(Mutex::new(Some(batch)))))
+    })();
+    FjallResult(result)
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
@@ -98,8 +103,18 @@ pub fn db_persist(db: ResourceArc<DbRsc>, mode: rustler::Atom) -> FjallOkResult 
                 mode
             )));
         };
-        db.db.persist(persist_mode).to_erlang_result()?;
+        let inner = db.0.read().unwrap();
+        let db_ref = inner.db.as_ref().ok_or(FjallError::DbClosed)?;
+        db_ref.persist(persist_mode).to_erlang_result()?;
         Ok(())
     })();
     FjallOkResult(result)
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
+pub fn db_close(db: ResourceArc<DbRsc>) -> FjallOkResult {
+    let mut inner = db.0.write().unwrap();
+    inner.keyspaces.clear();
+    inner.db.take();
+    FjallOkResult(Ok(()))
 }

@@ -49,6 +49,7 @@ ok = fjall:commit(Tx).
 -export([
     %% Database
     open/1, open/2,
+    close/1,
     keyspace/2, keyspace/3,
     batch/1,
     write_tx/1,
@@ -258,6 +259,13 @@ open(Path, Options) ->
                 Err -> Err
             end
     end.
+
+-doc "Closes the database, releasing file locks and resources.".
+-spec close(db()) -> result().
+close({db, Ref}) ->
+    fjall_db:close(Ref);
+close({otx_db, Ref}) ->
+    fjall_otx_db:close(Ref).
 
 -doc "Creates a write batch for atomic multi-keyspace writes.".
 -spec batch(db()) -> result(batch()).
